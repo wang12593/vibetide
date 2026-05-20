@@ -1,0 +1,21 @@
+﻿
+=== Test 1: "甯垜鍒嗘瀽涓夊ぇ澶獟鐨勭垎娆句綔鍝? ===
+Expect clarification: true
+needsClarification: true
+workflowId: a0000000-0000-0000-0000-000000000001
+questions: 2
+PASS: true
+
+=== Test 2: "鍒嗘瀽浜烘皯鏃ユ姤鏂板崕绀惧ぎ瑙嗘柊闂荤殑鐖嗘浣滃搧" ===
+Expect clarification: true
+needsClarification: true
+workflowId: a0000000-0000-0000-0000-000000000001
+questions: 2
+PASS: true
+
+=== Test 3: "甯垜鍒嗘瀽涓夊ぇ澶獟鍦ㄥ井鍗氫笂鐨勭垎娆剧煭瑙嗛" ===
+Expect clarification: false
+needsClarification: false
+workflowId: a0000000-0000-0000-0000-000000000001
+questions: 0
+PASS: true

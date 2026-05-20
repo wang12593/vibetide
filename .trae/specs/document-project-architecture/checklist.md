@@ -1,0 +1,18 @@
+- [ ] architecture.md 文件存在于 docs/ 目录下
+- [ ] architecture.md 包含技术栈概览（12+ 技术栈及版本）
+- [ ] architecture.md 包含系统架构图（ASCII 或 Mermaid 格式）
+- [ ] architecture.md 包含路由结构（3 大区域 + 48 子模块）
+- [ ] architecture.md 包含数据流架构（Server/Client 分离、DAL → Drizzle → PostgreSQL）
+- [ ] architecture.md 包含 Agent 系统架构（意图识别 3 阶段 + 7 层 Prompt + 10 员工）
+- [ ] architecture.md 包含技能系统（44 技能 + 7 分类 + SKILL.md 规范）
+- [ ] architecture.md 包含数据库架构（~145 表 + 72+ 枚举 + 多租户 + RBAC）
+- [ ] architecture.md 包含认证与权限（Supabase Auth + RBAC 3 角色）
+- [ ] architecture.md 包含设计系统（Glass UI + 46 共享组件 + 6 图表）
+- [ ] design.md 文件存在于 docs/ 目录下
+- [ ] design.md 包含模块职责划分（8 大模块）
+- [ ] design.md 包含关键设计决策（6+ 决策及原因）
+- [ ] design.md 包含 API 路由清单（15 个端点）
+- [ ] design.md 包含环境变量说明（12 个变量）
+- [ ] 两份文档内容与代码实际状态一致
+- [ ] 所有图表使用 ASCII 或 Mermaid 格式（无外部图片依赖）
+- [ ] 文档全部使用中文

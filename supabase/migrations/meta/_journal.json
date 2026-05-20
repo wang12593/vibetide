@@ -1,0 +1,265 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1772761664829,
+      "tag": "0000_faulty_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772774982153,
+      "tag": "0001_wonderful_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772813901370,
+      "tag": "0002_workable_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772901465900,
+      "tag": "0003_confused_the_liberteens",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773546412110,
+      "tag": "0004_happy_marten_broadcloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773915325356,
+      "tag": "0005_clammy_mindworm",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773924609318,
+      "tag": "0006_jittery_northstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773927154860,
+      "tag": "0007_outgoing_magus",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774083619647,
+      "tag": "0008_heavy_thunderbolt_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774117366032,
+      "tag": "0009_classy_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774310400000,
+      "tag": "0010_unique_constraints_and_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1774175062902,
+      "tag": "0011_mission_source_module",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1774232190390,
+      "tag": "0012_robust_cannonball",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1774290165928,
+      "tag": "0013_handy_umar",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1775121967635,
+      "tag": "0014_faulty_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1775205430203,
+      "tag": "0015_hard_vivisector",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1775402572334,
+      "tag": "0016_adorable_silvermane",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1775968312548,
+      "tag": "0017_ambiguous_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775984099305,
+      "tag": "0018_crazy_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1776234829807,
+      "tag": "0019_bizarre_anthem",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1776241275426,
+      "tag": "0020_next_thena",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1776442004126,
+      "tag": "0021_outgoing_toxin",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1776492000000,
+      "tag": "0022_pg_trgm_extension",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1776493990092,
+      "tag": "0023_collection_hub_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1776495262918,
+      "tag": "0024_goofy_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1776504312704,
+      "tag": "0025_rainy_thunderbolt_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1776570296931,
+      "tag": "0026_low_prism",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1776571632185,
+      "tag": "0027_aspiring_photon",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1776572115615,
+      "tag": "0028_warm_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1776654294895,
+      "tag": "0029_catchup_hand_written_migrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1776671953470,
+      "tag": "0030_workflow_templates_featured",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1776743913157,
+      "tag": "0031_petite_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1776962558421,
+      "tag": "0032_amused_the_santerians",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777280980268,
+      "tag": "0033_unique_mister_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1778160444572,
+      "tag": "0034_unknown_celestials",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1778317382637,
+      "tag": "0035_add_metadata_to_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1778690714396,
+      "tag": "0036_cuddly_wraith",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+/**
+ * @hidden 数据采集 — 模块已解耦暂不开放，如需恢复请在侧边栏添加入口。
+ * 如需修改请先确认不影响活跃模块后再操作。
+ */
+
+import { listCollectionSources } from "@/lib/dal/collection";
+import { getCurrentUserOrg } from "@/lib/dal/auth";
+import { redirect } from "next/navigation";
+import { SourcesClient } from "./sources-client";
+import { listAdapterMetas } from "@/lib/collection/adapter-meta";
+
+export const dynamic = "force-dynamic";
+
+export default async function SourcesPage() {
+  const orgId = await getCurrentUserOrg();
+  if (!orgId) redirect("/login");
+
+  const [sources, adapterMetas] = await Promise.all([
+    listCollectionSources(orgId),
+    Promise.resolve(listAdapterMetas()),
+  ]);
+
+  return (
+    <SourcesClient
+      initialSources={sources.map((s) => ({
+        id: s.id,
+        name: s.name,
+        sourceType: s.sourceType,
+        enabled: s.enabled,
+        scheduleCron: s.scheduleCron,
+        targetModules: s.targetModules,
+        lastRunAt: s.lastRunAt?.toISOString() ?? null,
+        lastRunStatus: s.lastRunStatus,
+        totalItemsCollected: s.totalItemsCollected,
+      }))}
+      adapterMetas={adapterMetas}
+    />
+  );
+}
