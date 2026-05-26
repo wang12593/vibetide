@@ -22,6 +22,24 @@ async function ensureUserProfile(userId: string, displayName: string): Promise<s
     })
     .onConflictDoNothing();
 
+  try {
+    const editorRole = await db.query.roles.findFirst({
+      where: and(eq(roles.slug, "editor"), eq(roles.organizationId, defaultOrg.id)),
+    });
+    const roleToAssign = editorRole ?? await db.query.roles.findFirst({
+      where: and(eq(roles.slug, "editor"), eq(roles.isSystem, true)),
+    });
+    if (roleToAssign) {
+      await db.insert(userRoles).values({
+        userId,
+        roleId: roleToAssign.id,
+        organizationId: defaultOrg.id,
+      }).onConflictDoNothing();
+    }
+  } catch (err) {
+    console.error("[auth] auto-assign editor role failed:", err);
+  }
+
   return defaultOrg.id;
 }
 

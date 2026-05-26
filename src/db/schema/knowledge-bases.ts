@@ -16,6 +16,8 @@ import {
   knowledgeSourceTypeEnum,
   syncLogStatusEnum,
   contentVisibilityEnum,
+  kbOwnerTypeEnum,
+  kbDocumentStatusEnum,
 } from "./enums";
 
 export const knowledgeBases = pgTable("knowledge_bases", {
@@ -40,6 +42,7 @@ export const knowledgeBases = pgTable("knowledge_bases", {
 
   createdBy: uuid("created_by"),
   visibility: contentVisibilityEnum("visibility").default("org"),
+  ownerType: kbOwnerTypeEnum("owner_type").default("personal"),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -120,6 +123,30 @@ export const knowledgeSyncLogs = pgTable("knowledge_sync_logs", {
     .notNull(),
 });
 
+export const kbDocuments = pgTable("kb_documents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  knowledgeBaseId: uuid("knowledge_base_id")
+    .references(() => knowledgeBases.id, { onDelete: "cascade" })
+    .notNull(),
+
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: integer("file_size").default(0),
+  storagePath: text("storage_path"),
+  parseStatus: kbDocumentStatusEnum("parse_status").default("pending"),
+  chunkCount: integer("chunk_count").default(0),
+  errorMessage: text("error_message"),
+
+  uploadedBy: uuid("uploaded_by"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // Relations
 export const knowledgeBasesRelations = relations(
   knowledgeBases,
@@ -131,8 +158,16 @@ export const knowledgeBasesRelations = relations(
     employeeKnowledgeBases: many(employeeKnowledgeBases),
     items: many(knowledgeItems),
     syncLogs: many(knowledgeSyncLogs),
+    documents: many(kbDocuments),
   })
 );
+
+export const kbDocumentsRelations = relations(kbDocuments, ({ one }) => ({
+  knowledgeBase: one(knowledgeBases, {
+    fields: [kbDocuments.knowledgeBaseId],
+    references: [knowledgeBases.id],
+  }),
+}));
 
 export const knowledgeItemsRelations = relations(
   knowledgeItems,

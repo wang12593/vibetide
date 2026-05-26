@@ -49,6 +49,10 @@ import {
   Users,
   ScrollText,
   Settings as SettingsIcon,
+  MessageSquare,
+  FileUp,
+  FileSpreadsheet,
+  FileType,
 } from "lucide-react";
 import {
   addKnowledgeItem,
@@ -65,6 +69,18 @@ import type {
   KBBindingRow,
   KBVectorizationStatus,
 } from "@/lib/types";
+import { KbChatClient } from "./kb-chat-client";
+
+interface KbDocument {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  parseStatus: string;
+  chunkCount: number;
+  errorMessage: string | null;
+  createdAt: string;
+}
 
 const KB_TYPE_LABELS: Record<string, string> = {
   general: "通用",
@@ -85,9 +101,10 @@ interface Props {
   initialItems: KBItemListResult;
   bindings: KBBindingRow[];
   syncLogs: KBSyncLogRow[];
+  documents: KbDocument[];
 }
 
-export function KBDetailClient({ kb, initialItems, bindings, syncLogs }: Props) {
+export function KBDetailClient({ kb, initialItems, bindings, syncLogs, documents }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("documents");
 
@@ -163,16 +180,12 @@ export function KBDetailClient({ kb, initialItems, bindings, syncLogs }: Props) 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4 bg-transparent border-0 p-0 h-auto gap-2">
           <TabsTrigger value="documents" className="border-0 data-[state=active]:bg-accent">
-            <FileText className="w-3.5 h-3.5 mr-1.5" />
-            文档 ({initialItems.total})
+            <FileUp className="w-3.5 h-3.5 mr-1.5" />
+            文档管理 ({documents.length})
           </TabsTrigger>
-          <TabsTrigger value="bindings" className="border-0 data-[state=active]:bg-accent">
-            <Users className="w-3.5 h-3.5 mr-1.5" />
-            绑定数字员工 ({bindings.length})
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="border-0 data-[state=active]:bg-accent">
-            <ScrollText className="w-3.5 h-3.5 mr-1.5" />
-            同步日志
+          <TabsTrigger value="chat" className="border-0 data-[state=active]:bg-accent">
+            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+            知识对话
           </TabsTrigger>
           <TabsTrigger value="settings" className="border-0 data-[state=active]:bg-accent">
             <SettingsIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -181,19 +194,25 @@ export function KBDetailClient({ kb, initialItems, bindings, syncLogs }: Props) 
         </TabsList>
 
         <TabsContent value="documents">
-          <DocumentsTab kbId={kb.id} initialItems={initialItems} />
+          <FileDocumentsTab kbId={kb.id} documents={documents} initialItems={initialItems} />
         </TabsContent>
 
-        <TabsContent value="bindings">
-          <BindingsTab bindings={bindings} />
-        </TabsContent>
-
-        <TabsContent value="logs">
-          <LogsTab syncLogs={syncLogs} />
+        <TabsContent value="chat">
+          <KbChatClient kbId={kb.id} kbName={kb.name} />
         </TabsContent>
 
         <TabsContent value="settings">
-          <SettingsTab kb={kb} />
+          <div className="space-y-6">
+            <SettingsTab kb={kb} />
+            <div>
+              <h3 className="text-sm font-medium text-foreground mb-3">绑定数字员工</h3>
+              <BindingsTab bindings={bindings} />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-foreground mb-3">同步日志</h3>
+              <LogsTab syncLogs={syncLogs} />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -201,7 +220,194 @@ export function KBDetailClient({ kb, initialItems, bindings, syncLogs }: Props) 
 }
 
 // ---------------------------------------------------------------------------
-// Documents Tab
+// File Documents Tab (upload + file list + legacy chunks)
+// ---------------------------------------------------------------------------
+
+const FILE_TYPE_ICONS: Record<string, typeof FileText> = {
+  pdf: FileType,
+  docx: FileSpreadsheet,
+  txt: FileText,
+  md: FileText,
+};
+
+const PARSE_STATUS: Record<string, { label: string; color: string }> = {
+  pending: { label: "等待中", color: "text-gray-500" },
+  parsing: { label: "解析中", color: "text-blue-500" },
+  done: { label: "已完成", color: "text-emerald-500" },
+  failed: { label: "失败", color: "text-red-500" },
+};
+
+function FileDocumentsTab({
+  kbId,
+  documents,
+  initialItems,
+}: {
+  kbId: string;
+  documents: KbDocument[];
+  initialItems: KBItemListResult;
+}) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleUpload = async (files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    const errors: string[] = [];
+    for (const file of fileArr) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`/api/knowledge-bases/${kbId}/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          errors.push(`${file.name}: ${data.error || "上传失败"}`);
+        }
+      } catch {
+        errors.push(`${file.name}: 网络错误`);
+      }
+    }
+
+    setUploading(false);
+    if (errors.length > 0) {
+      setUploadError(errors.join("\n"));
+    } else {
+      router.refresh();
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleUpload(e.dataTransfer.files);
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-foreground">上传文件</h3>
+          <p className="text-xs text-muted-foreground">支持 PDF、Word、TXT、Markdown</p>
+        </div>
+
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+            dragOver
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-border/80 hover:bg-card/50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,.markdown"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && handleUpload(e.target.files)}
+          />
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+              <p className="text-sm text-muted-foreground">上传解析中...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <FileUp className="w-8 h-8 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">
+                拖拽文件到此处，或点击选择
+              </p>
+            </div>
+          )}
+        </div>
+        {uploadError && (
+          <p className="text-xs text-red-500 mt-2 whitespace-pre-line">{uploadError}</p>
+        )}
+      </div>
+
+      {documents.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-foreground mb-3">
+            已上传文件 ({documents.length})
+          </h3>
+          <div className="space-y-2">
+            {documents.map((doc) => {
+              const FileIcon = FILE_TYPE_ICONS[doc.fileType] || FileText;
+              const status = PARSE_STATUS[doc.parseStatus] || PARSE_STATUS.pending;
+              return (
+                <div
+                  key={doc.id}
+                  className="bg-card border border-border rounded-xl p-3 flex items-center gap-3"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center shrink-0">
+                    <FileIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {doc.fileName}
+                      </span>
+                      <span className={`text-[10px] ${status.color}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                      <span>{formatSize(doc.fileSize)}</span>
+                      <span>·</span>
+                      <span>{doc.fileType.toUpperCase()}</span>
+                      {doc.chunkCount > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>{doc.chunkCount} chunks</span>
+                        </>
+                      )}
+                      {doc.errorMessage && (
+                        <>
+                          <span>·</span>
+                          <span className="text-red-500">{doc.errorMessage}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-foreground">
+            知识切片 ({initialItems.total})
+          </h3>
+        </div>
+        <DocumentsTab kbId={kbId} initialItems={initialItems} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Documents Tab (legacy chunks view)
 // ---------------------------------------------------------------------------
 
 function DocumentsTab({

@@ -5,6 +5,7 @@ import {
   knowledgeSyncLogs,
   employeeKnowledgeBases,
   aiEmployees,
+  kbDocuments,
 } from "@/db/schema";
 import { eq, and, asc, desc, sql, ilike, notInArray, inArray, or, isNotNull } from "drizzle-orm";
 import { buildVisibilityCondition } from "./visibility-filter";
@@ -403,4 +404,91 @@ export async function loadEmbeddedKnowledgeItems(
       snippet: r.snippet || "",
       embedding: r.embedding as number[],
     }));
+}
+
+export async function listPersonalKnowledgeBases(
+  userId: string,
+  organizationId: string
+): Promise<KBSummary[]> {
+  const rows = await db
+    .select({
+      id: knowledgeBases.id,
+      name: knowledgeBases.name,
+      description: knowledgeBases.description,
+      type: knowledgeBases.type,
+      documentCount: knowledgeBases.documentCount,
+      chunkCount: knowledgeBases.chunkCount,
+      vectorizationStatus: knowledgeBases.vectorizationStatus,
+      lastSyncAt: knowledgeBases.lastSyncAt,
+      createdAt: knowledgeBases.createdAt,
+      updatedAt: knowledgeBases.updatedAt,
+      boundCount: sql<number>`(
+        SELECT COUNT(*)::int FROM ${employeeKnowledgeBases}
+        WHERE ${employeeKnowledgeBases.knowledgeBaseId} = ${knowledgeBases.id}
+      )`,
+    })
+    .from(knowledgeBases)
+    .where(
+      and(
+        eq(knowledgeBases.createdBy, userId),
+        eq(knowledgeBases.organizationId, organizationId),
+        eq(knowledgeBases.ownerType, "personal")
+      )
+    )
+    .orderBy(desc(knowledgeBases.updatedAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description || "",
+    type: r.type,
+    documentCount: r.documentCount || 0,
+    chunkCount: r.chunkCount || 0,
+    vectorizationStatus: r.vectorizationStatus as KBVectorizationStatus,
+    boundEmployeeCount: Number(r.boundCount || 0),
+    lastSyncAt: toIsoStringNullable(r.lastSyncAt),
+    updatedAt: toIsoString(r.updatedAt),
+    createdAt: toIsoString(r.createdAt),
+  }));
+}
+
+export async function listKbDocuments(
+  kbId: string
+): Promise<
+  Array<{
+    id: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    parseStatus: string;
+    chunkCount: number;
+    errorMessage: string | null;
+    createdAt: string;
+  }>
+> {
+  const rows = await db
+    .select({
+      id: kbDocuments.id,
+      fileName: kbDocuments.fileName,
+      fileType: kbDocuments.fileType,
+      fileSize: kbDocuments.fileSize,
+      parseStatus: kbDocuments.parseStatus,
+      chunkCount: kbDocuments.chunkCount,
+      errorMessage: kbDocuments.errorMessage,
+      createdAt: kbDocuments.createdAt,
+    })
+    .from(kbDocuments)
+    .where(eq(kbDocuments.knowledgeBaseId, kbId))
+    .orderBy(desc(kbDocuments.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    fileName: r.fileName,
+    fileType: r.fileType,
+    fileSize: r.fileSize || 0,
+    parseStatus: r.parseStatus || "pending",
+    chunkCount: r.chunkCount || 0,
+    errorMessage: r.errorMessage,
+    createdAt: toIsoString(r.createdAt),
+  }));
 }

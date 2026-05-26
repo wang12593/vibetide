@@ -1,8 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { getCurrentUserOrg } from "@/lib/dal/auth";
-import { listKnowledgeBaseSummariesByOrg } from "@/lib/dal/knowledge-bases";
+import { getCurrentUserAndOrg } from "@/lib/dal/auth";
+import {
+  listKnowledgeBaseSummariesByOrg,
+  listPersonalKnowledgeBases,
+} from "@/lib/dal/knowledge-bases";
 import {
   getKnowledgeSources,
   getKnowledgeItems,
@@ -12,12 +15,14 @@ import {
 import { KnowledgeBasesClient } from "./knowledge-bases-client";
 
 export default async function KnowledgeBasesPage() {
-  const orgId = await getCurrentUserOrg();
-  if (!orgId) redirect("/login");
+  const userAndOrg = await getCurrentUserAndOrg();
+  if (!userAndOrg) redirect("/login");
+  const { userId, organizationId: orgId } = userAndOrg;
 
-  const [summaries, channelSources, channelItems, channelDNA, channelSyncLogs] =
+  const [summaries, personalKBs, channelSources, channelItems, channelDNA, channelSyncLogs] =
     await Promise.all([
       listKnowledgeBaseSummariesByOrg(orgId).catch((err) => { console.error("[knowledge-bases] load summaries failed:", err); return []; }),
+      listPersonalKnowledgeBases(userId, orgId).catch((err) => { console.error("[knowledge-bases] load personal KBs failed:", err); return []; }),
       getKnowledgeSources().catch((err) => { console.error("[knowledge-bases] load channel sources failed:", err); return {
         upload: [],
         cms: [],
@@ -32,6 +37,7 @@ export default async function KnowledgeBasesPage() {
   return (
     <KnowledgeBasesClient
       initialSummaries={summaries}
+      personalKBs={personalKBs}
       channelData={{
         sources: channelSources,
         items: channelItems,

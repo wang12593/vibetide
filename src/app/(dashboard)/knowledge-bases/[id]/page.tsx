@@ -7,6 +7,7 @@ import {
   listKnowledgeItems,
   getKnowledgeBaseBindings,
   getKnowledgeBaseSyncLogs,
+  listKbDocuments,
 } from "@/lib/dal/knowledge-bases";
 import { KBDetailClient } from "./kb-detail-client";
 
@@ -23,7 +24,7 @@ export default async function KnowledgeBaseDetailPage({ params }: PageProps) {
   const kb = await getKnowledgeBaseById(orgId, id);
   if (!kb) notFound();
 
-  const [itemsResult, bindings, syncLogs] = await Promise.all([
+  const [itemsResult, bindings, syncLogs, documents] = await Promise.all([
     listKnowledgeItems(orgId, id, { page: 1, pageSize: 20 }).catch((err) => { console.error("[kb-detail] load items failed:", err); return {
       items: [],
       total: 0,
@@ -32,6 +33,7 @@ export default async function KnowledgeBaseDetailPage({ params }: PageProps) {
     }; }),
     getKnowledgeBaseBindings(orgId, id).catch((err) => { console.error("[kb-detail] load bindings failed:", err); return []; }),
     getKnowledgeBaseSyncLogs(orgId, id, 50).catch((err) => { console.error("[kb-detail] load sync logs failed:", err); return []; }),
+    listKbDocuments(id).catch((err) => { console.error("[kb-detail] load documents failed:", err); return []; }),
   ]);
 
   return (
@@ -40,6 +42,7 @@ export default async function KnowledgeBaseDetailPage({ params }: PageProps) {
       initialItems={itemsResult}
       bindings={bindings}
       syncLogs={syncLogs}
+      documents={documents}
     />
   );
 }

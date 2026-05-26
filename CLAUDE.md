@@ -1,6 +1,45 @@
-# CLAUDE.md
+# CLAUDE.md — VibeTide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 12 条行为准则（不可协商）
+
+以下规则源自 Karpathy 4-rule 基线 + claude-code-pro-pack 扩展，覆盖 AI 编程 Agent 的核心失败模式。每条规则对应一个真实的失败场景，不是偏好。
+
+1. **编码前先思考。** 陈述假设，暴露权衡，不确定时先问不要猜。有更简单的方案时主动反馈。
+2. **简单优先。** 只写解决问题所需的最少代码。不做推测性功能，不对单次使用的代码做抽象。
+3. **外科手术式修改。** 只碰必须碰的。不"改进"相邻代码、注释或格式。匹配现有风格。
+4. **目标驱动执行。** 先定义成功标准，再循环迭代直到验证通过。告诉 Claude 成功长什么样，让它自己迭代。
+5. **别让模型做非语言工作。** 重试、路由、限流、算术、时间判断——用确定性代码，不要用 prompt。
+6. **硬性 token 预算。** 每个任务上限 4000 token，每个会话上限 30000 token。接近预算时总结并重新开始。不要静默超限。
+7. **暴露冲突，不要取平均。** 代码库两处模式矛盾时，选一个（更近期/更经过测试的），解释原因，标记另一个待清理。不要混合两种模式。
+8. **先读后写。** 添加代码前先读附近的代码、导出、调用方、共享工具。"看起来正交"很危险，重复函数会通过 import 顺序静默破坏。
+9. **测试以正确性为门槛，不是"通过"。** 返回常量的函数通过了测试不等于测试有效。断言绑定行为，不是形状。
+10. **长操作需要检查点。** 多步重构和迁移在每步之间提交，一次错误的转向不需要回退六步。
+11. **惯例胜过新奇。** 代码库已有既定模式时，用那个模式，即使你的"更好"。两种模式并存永远比任何一种都差。
+12. **显式失败，不要静默。** 迁移"成功完成"却因约束违反跳过 14% 的记录——这是 bug 不是成功。暴露部分失败、跳过的行、截断的输出、重试耗尽。
+
+## 项目定制
+
+- **Stack:** Next.js 16 + React 19 + TypeScript 5 (strict) + Drizzle ORM + Supabase PostgreSQL
+- **Test runner:** 暂无统一测试框架，验证靠 `npx tsc --noEmit` + `npm run build`
+- **Lint:** `npm run lint` — ESLint
+- **Path alias:** `@/*` maps to `./src/*`
+- **语言:** 所有 UI 文本使用简体中文，回复使用中文
+- **禁止触摸:** `supabase/migrations/` 由 Drizzle CLI 管理，不要手动修改
+- **Secrets:** 所有环境变量在 `.env.local`，绝不记录或提交
+- **Git:** 单分支开发，所有 commit 直接落在 `main`，禁止创建 feature 分支和 worktree
+
+## 验证清单
+
+在将任务标记为完成前，逐项检查：
+
+- [ ] 是否明确陈述了假设？
+- [ ] 是否有修改触及了任务范围之外的代码？如果有，回退或说明理由。
+- [ ] 是否有测试仅因返回常量而"通过"？重新检查断言。
+- [ ] 是否有部分失败、跳过的记录、截断的输出？在摘要中暴露。
+- [ ] `npx tsc --noEmit` 类型检查通过？
+- [ ] `npm run build` 构建通过？
+
+---
 
 ## OpenSpec（规范驱动开发）
 
@@ -156,25 +195,19 @@ Known drift patterns to avoid (these have all appeared and been cleaned up — d
   rows={items}
   rowKey={(item) => item.id}
   columns={[
-    { key: "name", header: "名称", render: (r) => r.name },              // flex column (default)
-    { key: "status", header: "状态", width: "w-24", render: (r) => ... }, // Tailwind width class
-    { key: "date", header: "时间", width: "120px", render: (r) => ... }, // CSS length
+    { key: "name", header: "名称", render: (r) => r.name },
+    { key: "status", header: "状态", width: "w-24", render: (r) => ... },
+    { key: "date", header: "时间", width: "120px", render: (r) => ... },
     { key: "count", header: "数量", align: "right", sortable: true, render: (r) => r.count },
   ]}
-  // Optional: selection
   selectable
   selectedKeys={selected}
   onSelectionChange={setSelected}
-  // Optional: sorting (controlled)
   sortKey={sortField}
   sortDirection={sortDir}
   onSortChange={(key, dir) => { ... }}
-  // Optional: expandable rows. If `onExpandChange` is provided, row-click toggles
-  // expansion and a chevron column appears. Omit it to drive expansion from an
-  // action button inside a cell.
   expandedKeys={expanded}
   renderExpanded={(row) => <div>...</div>}
-  // Optional: empty state + footer
   emptyMessage={<EmptyStateContent />}
   footer={<FooterStats />}
 />
@@ -183,7 +216,7 @@ Known drift patterns to avoid (these have all appeared and been cleaned up — d
 **SearchInput API:**
 ```tsx
 <SearchInput placeholder="搜索..." value={q} onChange={e => setQ(e.target.value)} />
-<SearchInput className="w-60" inputClassName="h-8 text-xs" ... />  // compact variant
+<SearchInput className="w-60" inputClassName="h-8 text-xs" ... />
 ```
 `className` goes on the wrapper (use for width / positioning). `inputClassName` forwards to the inner `<Input>` (use for size variants like `h-8 text-xs`).
 
@@ -192,9 +225,8 @@ Known drift patterns to avoid (these have all appeared and been cleaned up — d
 <DatePicker value={date} onChange={setDate} placeholder="选择日期" />
 <DateRangePicker value={range} onChange={setRange} placeholder="选择日期范围" />
 ```
-The trigger visually matches `<Input>` (bordered, muted) since date pickers are form inputs, not primary-action buttons.
 
-**Enforcement:** `eslint.config.mjs` defines `no-restricted-syntax` rules (currently `warn`) that flag raw `<button>/<input>/<select>/<textarea>` in `src/app/**` and `src/components/**` (except under `src/components/ui/**`, `src/app/landing/**`, `src/components/media-assets/**`). Editor ESLint integrations show red squigglies on violations; CI output lists them too.
+**Enforcement:** `eslint.config.mjs` defines `no-restricted-syntax` rules (currently `warn`) that flag raw `<button>/<input>/<select>/<textarea>` in `src/app/**` and `src/components/**` (except under `src/components/ui/**`, `src/app/landing/**`, `src/components/media-assets/**`).
 
 ### Environment Variables
 
@@ -204,24 +236,24 @@ All environment variables are stored in **`.env.local`** (not `.env`). See `.env
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-DATABASE_URL              # Direct PostgreSQL connection for Drizzle
+DATABASE_URL
 
 # AI Services (DeepSeek via OpenAI-compatible API)
-OPENAI_API_KEY            # DeepSeek API key
+OPENAI_API_KEY
 OPENAI_API_BASE_URL       # https://api.deepseek.com/v1
 OPENAI_MODEL              # deepseek-chat
 
 # Web Search & Content Reading
-TAVILY_API_KEY            # Tavily Search API (全网搜索)
-JINA_API_KEY              # Jina Reader API (网页深读)
+TAVILY_API_KEY
+JINA_API_KEY
 
 # Trending Topics (热榜聚合)
 TRENDING_API_URL
 TRENDING_API_KEY
-TRENDING_RESPONSE_MAPPING # JSON response field mapping
+TRENDING_RESPONSE_MAPPING
 
 # BullMQ Worker
-REDIS_URL               # Redis connection for job queues (e.g. redis://localhost:6379)
+REDIS_URL
 ```
 
 **Important:** Supabase may have connectivity issues. Pages that query the database at render time must add `export const dynamic = 'force-dynamic'` to avoid build-time DB connection timeouts.
@@ -273,10 +305,10 @@ Phase 1 交付的 `src/lib/cms/` 模块是 VibeTide 唯一出口。
 - 现有 templatesData (6)：补齐 icon/defaultTeam/appChannelSlug
 
 **关键文件：**
-- DAL: `src/lib/dal/workflow-templates.ts` (listWorkflowTemplatesByOrg / seedBuiltinTemplatesForOrg / getByLegacyKey / create / update / softDisable)
-- Slug 工具: `src/lib/workflow-template-slug.ts` (templateToScenarioSlug)
-- Seed 映射: `src/db/seed-builtin-workflows.ts` (buildBuiltinScenarioSeeds)
-- Fallback: `src/lib/scenario-fallback.ts` (resolveScenarioConfig for mission display)
+- DAL: `src/lib/dal/workflow-templates.ts`
+- Slug 工具: `src/lib/workflow-template-slug.ts`
+- Seed 映射: `src/db/seed-builtin-workflows.ts`
+- Fallback: `src/lib/scenario-fallback.ts`
 - Spec: `docs/superpowers/specs/2026-04-19-unified-scenario-workflow-source.md`
 
 **B.2 Pending（独立 spec）：** `/scenarios/customize` 重写、`channels/gateway.ts` 改读 DB、删除 SCENARIO_CONFIG 常量、DROP employee_scenarios 表、mission 下游消费者迁到 workflowTemplateId。
@@ -348,7 +380,7 @@ Top-level module at `/knowledge-bases` for managing AI employee knowledge bases 
 - **Chunking:** `src/lib/knowledge/chunking.ts` — paragraph + sentence + char-based fallback, 500-800 chars per chunk with 50-char overlap
 - **Embeddings:** `src/lib/knowledge/embeddings.ts` — Jina `jina-embeddings-v3` (1024 dim), batch 100 with retry/backoff. Async via BullMQ `kb/document-created` job.
 - **Retrieval:** `src/lib/knowledge/retrieval.ts` — application-layer cosine similarity over jsonb-stored vectors. V1 keeps jsonb (no pgvector); upgrade path documented when chunk count exceeds ~10k.
-- **Agent integration:** `kb_search` tool in `tool-registry.ts` (`createKnowledgeBaseTools`). Auto-injected at execution time when employee has KB bindings (see `assembly.ts` and `execution.ts`). Filters by employee's bound KBs and skips KBs with `vectorization_status != 'done'`.
+- **Agent integration:** `kb_search` tool in `tool-registry.ts` (`createKnowledgeBaseTools`). Auto-injected at execution time when employee has KB bindings. Filters by employee's bound KBs and skips KBs with `vectorization_status != 'done'`.
 
 ## AI SDK Notes
 
@@ -357,12 +389,6 @@ This project uses **AI SDK (Vercel) v6**. Key API differences from older version
 - Use `inputSchema` not `parameters` for tool definitions
 - Use `maxOutputTokens` not `maxTokens`
 - Import from `ai` package: `generateText`, `tool`, `stopWhen`, `stepCountIs`
-
-## Verification
-
-After implementing features, always verify before considering work complete:
-1. `npx tsc --noEmit` — Type check passes
-2. `npm run build` — Production build passes
 
 ## Conventions
 
@@ -376,12 +402,10 @@ After implementing features, always verify before considering work complete:
 
 **本仓库只有 `main` 一个分支，所有功能迭代直接在 `main` 上进行。**
 
-- **禁止创建 feature / worktree 分支**（包括 `feature/*`、`claude/*`、`.worktrees/`、`.claude/worktrees/` 等）。历史上多分支 + worktree 并行导致过多次合并冲突；目前是单人开发，没有分支隔离的收益。
-- **所有 commit 直接落在 `main`**。每个完成的逻辑单元立即 commit + push。
-- **Agent / subagent 工作也必须在 `main` 上进行**，不要"为了隔离"而私自开分支。如果担心 breaking change，就把工作拆小成多个独立 commit，每个都能独立 build，而不是用分支隔离。
-- **不要使用 `git worktree add`**。`.worktrees/` 和 `.claude/worktrees/` 已在 `.gitignore` 中；即便创建也不会被追踪。
-- **Phase 级 / 大 refactor 的临时中间态**：用 tsc 零错误 + 每个 commit 都能独立 build 来保证安全，而不是分支隔离。如果中间态必然 break（例如 Phase 3 的常量删除引发 Phase 4 连锁修改），把 Phase 3 + Phase 4 合为一次 commit，不要拆成跨 commit 的 red→green 状态。
+- **禁止创建 feature / worktree 分支**（包括 `feature/*`、`claude/*`、`.worktrees/`、`.claude/worktrees/` 等）
+- **所有 commit 直接落在 `main`**。每个完成的逻辑单元立即 commit + push
+- **Agent / subagent 工作也必须在 `main` 上进行**，不要"为了隔离"而私自开分支
+- **不要使用 `git worktree add`**
+- **Phase 级 / 大 refactor 的临时中间态**：用 tsc 零错误 + 每个 commit 都能独立 build 来保证安全
 
-所有的按钮或lab等任何可以点击触发事件的按钮，不要带边框
-
-所有的回复采用中文
+所有的按钮或 lab 等任何可以点击触发事件的按钮，不要带边框

@@ -56,6 +56,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { EMPLOYEE_META, EMPLOYEE_SHORT_DESC, type EmployeeId } from "@/lib/constants";
+import { CommandPopover, type CommandItem } from "@/components/shared/command-popover";
+import { useCommandTrigger } from "@/hooks/use-command-trigger";
 import { addGroupParticipant, removeGroupParticipant } from "@/app/actions/group-chat";
 import type { AIEmployee } from "@/lib/types";
 import { normalizeFieldOption } from "@/lib/types";
@@ -475,6 +477,18 @@ export function ChatPanel({
     : (employee
     ? EMPLOYEE_SHORT_DESC[employee.id as EmployeeId] ?? ""
     : "");
+
+  const groupAtTrigger = useCommandTrigger({ triggerChar: "@" });
+  const groupMemberSlugs: string[] = isGroup
+    ? (((viewingSaved as any)?.metadata as Record<string, unknown>)?.employeeSlugs as string[]) ?? []
+    : [];
+  const groupMemberItems: CommandItem[] = groupMemberSlugs
+    .filter((slug) => slug in EMPLOYEE_META)
+    .map((slug) => {
+      const m = EMPLOYEE_META[slug as EmployeeId];
+      const IconComp = m.icon;
+      return { id: slug, label: m.name, description: `${m.nickname} · ${m.title}`, icon: <span className="text-sm"><IconComp size={14} /></span> };
+    });
 
   /* ── Border animation logic ── */
   const borderActive = inputHovered || inputFocused;
@@ -1612,6 +1626,30 @@ export function ChatPanel({
 
               {/* Inner content */}
               <div className="relative rounded-[15px] bg-white dark:bg-gray-800">
+                {isGroup && groupMemberItems.length > 0 && (
+                  <CommandPopover
+                    items={groupMemberItems}
+                    visible={groupAtTrigger.visible}
+                    onSelect={(item) => {
+                      const m = EMPLOYEE_META[item.id as EmployeeId];
+                      const mention = `@${m?.name ?? item.id}`;
+                      setInputText((prev) => {
+                        const cursor = textareaRef.current?.selectionStart ?? prev.length;
+                        const before = prev.slice(0, cursor);
+                        const atIdx = before.lastIndexOf("@");
+                        if (atIdx >= 0) {
+                          return prev.slice(0, atIdx) + mention + " " + prev.slice(cursor);
+                        }
+                        return prev + mention + " ";
+                      });
+                      groupAtTrigger.handleSelect();
+                      setTimeout(() => textareaRef.current?.focus(), 0);
+                    }}
+                    onClose={groupAtTrigger.resetTrigger}
+                    filterText={groupAtTrigger.filterText}
+                    title="群内成员"
+                  />
+                )}
                 {/* Attachment chips */}
                 {attachedFiles.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 px-4 pt-3">
@@ -1672,10 +1710,22 @@ export function ChatPanel({
                       : `和${displayTitle}自由对话...`
                   }
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    if (isGroup) {
+                      groupAtTrigger.handleChange(e.target.value, e.target.selectionStart);
+                    }
+                  }}
+                  onCompositionStart={() => {
+                    if (isGroup) groupAtTrigger.handleCompositionStart();
+                  }}
+                  onCompositionEnd={() => {
+                    if (isGroup) groupAtTrigger.handleCompositionEnd();
+                  }}
                   onFocus={() => setInputFocused(true)}
                   onBlur={() => setInputFocused(false)}
                   onKeyDown={(e) => {
+                    if (isGroup && groupAtTrigger.visible) return;
                     if (
                       e.key === "Enter" &&
                       !e.shiftKey &&

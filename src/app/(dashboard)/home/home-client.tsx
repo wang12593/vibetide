@@ -23,6 +23,7 @@ import {
   X,
   Loader2,
   Lock,
+  Zap,
 } from "lucide-react";
 import { getUserSuggestions } from "@/app/actions/user-ai-preferences";
 import {
@@ -40,6 +41,9 @@ import {
 import type { WorkflowTemplateRow } from "@/db/types";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { CommandPopover, type CommandItem } from "@/components/shared/command-popover";
+import { useCommandTrigger } from "@/hooks/use-command-trigger";
+import { EMPLOYEE_META, type EmployeeId } from "@/lib/constants";
 
 interface HomeClientProps {
   mulanDbId: string;
@@ -76,6 +80,8 @@ interface HomeClientProps {
     documentCount: number;
   }>;
   mulanWorkflows: (WorkflowTemplateRow & { __homepagePinnedAt?: Date | null })[];
+  builtinSkills: Array<{ slug: string; name: string; category: string; description: string }>;
+  customSkills?: Array<{ id: string; name: string; category: string; description: string; content?: string }>;
 }
 
 const HOME_CHAT_STATE_KEY = "home-embedded-chat-state";
@@ -104,6 +110,8 @@ export function HomeClient({
   mulanSkills: initialSkills,
   mulanKnowledgeBases: initialKBs,
   mulanWorkflows,
+  builtinSkills,
+  customSkills,
 }: HomeClientProps) {
   const router = useRouter();
   const [inputValue, setInputValue] = useState("");
@@ -147,6 +155,43 @@ export function HomeClient({
   const [disabledSlugs, setDisabledSlugs] = useState(initialDisabledSlugs);
   const [pendingToggleSlug, setPendingToggleSlug] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const slashTrigger = useCommandTrigger({ triggerChar: "/" });
+  const atTrigger = useCommandTrigger({ triggerChar: "@" });
+  const [selectedTargetSlug, setSelectedTargetSlug] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<{ id: string; name: string; isCustom?: boolean; content?: string } | null>(null);
+
+  const clearSelections = useCallback(() => {
+    setSelectedTargetSlug(null);
+    setSelectedSkill(null);
+  }, []);
+
+  const skillItems: CommandItem[] = [
+    ...builtinSkills.map((s) => ({
+      id: s.slug,
+      label: s.name,
+      description: s.description,
+      category: s.category,
+    })),
+    ...(customSkills ?? []).map((s) => ({
+      id: s.id,
+      label: s.name,
+      description: `${s.description}${s.content ? " · 指令模板" : ""}`,
+      category: `${s.category} [自定义]`,
+    })),
+  ];
+
+  const employeeItems: CommandItem[] = Object.entries(EMPLOYEE_META)
+    .filter(([slug]) => slug !== "leader" && slug !== "advisor" && slug !== "xiaotan" && !disabledSlugs.includes(slug))
+    .map(([slug, meta]) => {
+      const IconComp = meta.icon;
+      return {
+        id: slug,
+        label: meta.name,
+        description: `${meta.nickname} · ${meta.title}`,
+        icon: <span className="text-sm"><IconComp size={14} /></span>,
+      };
+    });
 
   useEffect(() => {
     getUserSuggestions().then(setSuggestions).catch(() => {
@@ -199,9 +244,14 @@ export function HomeClient({
         chatOpen?: boolean;
         messages?: ChatMessage[];
         timestamp?: number;
+        savedUserName?: string;
       };
       if (!data || typeof data.timestamp !== "number") return;
       if (Date.now() - data.timestamp > HOME_CHAT_STATE_TTL_MS) {
+        sessionStorage.removeItem(HOME_CHAT_STATE_KEY);
+        return;
+      }
+      if (data.savedUserName && data.savedUserName !== userName) {
         sessionStorage.removeItem(HOME_CHAT_STATE_KEY);
         return;
       }
@@ -227,7 +277,7 @@ export function HomeClient({
             : chat.messages;
         sessionStorage.setItem(
           HOME_CHAT_STATE_KEY,
-          JSON.stringify({ chatOpen, messages: trimmed, timestamp: Date.now() }),
+          JSON.stringify({ chatOpen, messages: trimmed, timestamp: Date.now(), savedUserName: userName }),
         );
       } catch (error) { console.error("保存聊天状态失败:", error); }
     }, 500);
@@ -235,21 +285,45 @@ export function HomeClient({
   }, [chatOpen, chat.messages, chat.isStreaming, chat.loading]);
 
   const [pendingSend, setPendingSend] = useState<string | null>(null);
+  const [pendingTargetSlug, setPendingTargetSlug] = useState<string | null>(null);
+  const [pendingSkillContext, setPendingSkillContext] = useState<{ id: string; name: string; isCustom?: boolean; content?: string } | null>(null);
 
   useEffect(() => {
     if (pendingSend && chatOpen) {
-      chat.sendMessage(pendingSend);
+      const msg = pendingSkillContext?.isCustom && pendingSkillContext.content
+        ? `${pendingSkillContext.content}\n\n${pendingSend}`
+        : pendingSend;
+      if (pendingTargetSlug) {
+        chat.sendMessage(msg, undefined, { skipIntent: true, targetEmployeeSlug: pendingTargetSlug });
+        setPendingTargetSlug(null);
+      } else if (pendingSkillContext && !pendingSkillContext.isCustom) {
+        chat.sendMessage(msg, undefined, { skipIntent: true, intentContext: { intentType: "skill_execution", skills: [pendingSkillContext.id], taskDescription: msg } });
+      } else {
+        chat.sendMessage(msg);
+      }
+      setPendingSkillContext(null);
       setPendingSend(null);
     }
-  }, [pendingSend, chatOpen, chat]);
+  }, [pendingSend, chatOpen, chat, pendingTargetSlug, pendingSkillContext]);
 
   const handleSubmit = useCallback(() => {
     if (!inputValue.trim()) return;
     const text = inputValue;
+    const target = selectedTargetSlug;
+    const skill = selectedSkill;
     setInputValue("");
+    clearSelections();
+    slashTrigger.resetTrigger();
+    atTrigger.resetTrigger();
     setPendingSend(text);
     setChatOpen(true);
-  }, [inputValue]);
+    if (target) {
+      setPendingTargetSlug(target);
+    }
+    if (skill) {
+      setPendingSkillContext(skill);
+    }
+  }, [inputValue, selectedTargetSlug, selectedSkill, slashTrigger, atTrigger, clearSelections]);
 
   const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -309,17 +383,30 @@ export function HomeClient({
     setChatInput("");
     setAttachedFiles([]);
     if (chatTextareaRef.current) chatTextareaRef.current.style.height = "auto";
-    chat.sendMessage(parts.join("\n"));
-  }, [chatInput, chat, attachedFiles]);
+
+    const finalMsg = selectedSkill?.isCustom && selectedSkill.content
+      ? `${selectedSkill.content}\n\n${parts.join("\n")}`
+      : parts.join("\n");
+
+    if (selectedTargetSlug) {
+      chat.sendMessage(finalMsg, undefined, { skipIntent: true, targetEmployeeSlug: selectedTargetSlug });
+    } else if (selectedSkill && !selectedSkill.isCustom) {
+      chat.sendMessage(finalMsg, undefined, { skipIntent: true, intentContext: { intentType: "skill_execution", skills: [selectedSkill.id], taskDescription: finalMsg } });
+    } else {
+      chat.sendMessage(finalMsg);
+    }
+    clearSelections();
+  }, [chatInput, chat, attachedFiles, selectedTargetSlug, selectedSkill, clearSelections]);
 
   const handleChatKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (slashTrigger.visible || atTrigger.visible) return;
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleChatSend();
       }
     },
-    [handleChatSend],
+    [handleChatSend, slashTrigger.visible, atTrigger.visible],
   );
 
   const handleCloseChat = useCallback(() => {
@@ -472,15 +559,108 @@ export function HomeClient({
             ))}
           </div>
         )}
-        <div className="px-5 pt-4 pb-2">
+        <div className="px-5 pt-4 pb-2 relative">
+          <CommandPopover
+            items={skillItems}
+            visible={slashTrigger.visible}
+            onSelect={(item) => {
+              slashTrigger.handleSelect();
+              const isCustom = (customSkills ?? []).some((s) => s.id === item.id);
+              const customSkill = (customSkills ?? []).find((s) => s.id === item.id);
+              setSelectedSkill({ id: item.id, name: item.label, isCustom, content: customSkill?.content });
+              setSelectedTargetSlug(null);
+              const current = mode === "chat" ? chatInput : inputValue;
+              const cleaned = current.replace(/\/[^\s]*$/, "");
+              if (mode === "chat") setChatInput(cleaned);
+              else setInputValue(cleaned);
+              setTimeout(() => chatTextareaRef.current?.focus(), 0);
+            }}
+            onClose={slashTrigger.resetTrigger}
+            filterText={slashTrigger.filterText}
+            title="选择技能"
+          />
+          <CommandPopover
+            items={employeeItems}
+            visible={atTrigger.visible}
+            onSelect={(item) => {
+              atTrigger.handleSelect();
+              setSelectedTargetSlug(item.id);
+              setSelectedSkill(null);
+              const current = mode === "chat" ? chatInput : inputValue;
+              const cleaned = current.replace(/@[^\s]*$/, "");
+              if (mode === "chat") setChatInput(cleaned);
+              else setInputValue(cleaned);
+              setTimeout(() => chatTextareaRef.current?.focus(), 0);
+            }}
+            onClose={atTrigger.resetTrigger}
+            filterText={atTrigger.filterText}
+            title="选择员工"
+          />
+          {(selectedSkill || selectedTargetSlug) && (
+            <div className="flex flex-wrap gap-1.5 pb-2">
+              {selectedSkill && (
+                <span className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-purple-50 dark:bg-purple-900/30 text-[11px] text-purple-700 dark:text-purple-300">
+                  <Zap size={10} className="flex-shrink-0" />
+                  <span>{selectedSkill.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSkill(null)}
+                    className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-purple-500/70 hover:text-purple-700 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-all bg-transparent cursor-pointer"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {selectedTargetSlug && (
+                <span className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[11px] text-blue-700 dark:text-blue-300">
+                  <Users size={10} className="flex-shrink-0" />
+                  <span>{EMPLOYEE_META[selectedTargetSlug as EmployeeId]?.name ?? selectedTargetSlug}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTargetSlug(null)}
+                    className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-blue-500/70 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-all bg-transparent cursor-pointer"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
           <textarea
             ref={chatTextareaRef}
             value={mode === "chat" ? chatInput : inputValue}
-            onChange={(e) => mode === "chat" ? setChatInput(e.target.value) : setInputValue(e.target.value)}
-            onKeyDown={mode === "chat" ? handleChatKeyDown : (e: KeyboardEvent<HTMLTextAreaElement>) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+            onChange={(e) => {
+              if (mode === "chat") {
+                setChatInput(e.target.value);
+              } else {
+                setInputValue(e.target.value);
+              }
+              slashTrigger.handleChange(e.target.value, e.target.selectionStart);
+              atTrigger.handleChange(e.target.value, e.target.selectionStart);
             }}
-            placeholder="有什么想法？告诉穆兰…"
+            onCompositionStart={() => {
+              slashTrigger.handleCompositionStart();
+              atTrigger.handleCompositionStart();
+            }}
+            onCompositionEnd={() => {
+              slashTrigger.handleCompositionEnd();
+              atTrigger.handleCompositionEnd();
+            }}
+            onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+              if (slashTrigger.visible || atTrigger.visible) return;
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (mode === "chat") handleChatSend();
+                else handleSubmit();
+              }
+            }}
+            placeholder={
+              selectedTargetSlug
+                ? `和${EMPLOYEE_META[selectedTargetSlug as EmployeeId]?.name ?? "员工"}对话…`
+                : selectedSkill
+                ? `使用 ${selectedSkill.name} 执行任务…`
+                : "有什么想法？告诉穆兰…  输入 / 选择技能  @ 选择员工"
+            }
             rows={mode === "chat" ? 1 : 2}
             className={cn(
               "w-full bg-transparent text-[15px] leading-relaxed",
@@ -1005,10 +1185,6 @@ export function HomeClient({
         </div>
 
         <div className="mx-auto">{renderInputBox("home")}</div>
-      </div>
-
-      <div className="relative z-10 flex-1 min-h-0 max-w-3xl mx-auto w-full px-6 overflow-y-auto scrollbar-thin pb-8">
-        {renderConfigSection()}
       </div>
     </div>
   );

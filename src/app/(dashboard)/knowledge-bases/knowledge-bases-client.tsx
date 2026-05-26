@@ -29,7 +29,6 @@ import { createKnowledgeBase } from "@/app/actions/knowledge-bases";
 import {
   BookMarked,
   Plus,
-  Search,
   Database,
   Loader2,
   Users,
@@ -38,6 +37,7 @@ import {
   Sparkles,
   AlertTriangle,
   Tv,
+  UserCircle,
 } from "lucide-react";
 import type {
   KBSummary,
@@ -115,10 +115,11 @@ interface ChannelData {
 
 interface Props {
   initialSummaries: KBSummary[];
+  personalKBs: KBSummary[];
   channelData?: ChannelData;
 }
 
-export function KnowledgeBasesClient({ initialSummaries, channelData }: Props) {
+export function KnowledgeBasesClient({ initialSummaries, personalKBs, channelData }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("general");
   const [search, setSearch] = useState("");
@@ -153,7 +154,7 @@ export function KnowledgeBasesClient({ initialSummaries, channelData }: Props) {
             管理 数字员工的通用知识库与频道专属知识沉淀。
           </p>
         </div>
-        {activeTab === "general" && (
+        {(activeTab === "general" || activeTab === "personal") && (
           <Button
             onClick={() => setCreateOpen(true)}
             className="rounded-xl border-0"
@@ -167,6 +168,10 @@ export function KnowledgeBasesClient({ initialSummaries, channelData }: Props) {
       {/* ── Top-level Tab: 通用知识库 / 频道知识沉淀 ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
         <TabsList className="bg-transparent border-0 p-0 h-auto gap-1">
+          <TabsTrigger value="personal" className="border-0 data-[state=active]:bg-accent rounded-lg px-4 py-2">
+            <UserCircle className="w-4 h-4 mr-1.5" />
+            我的知识库
+          </TabsTrigger>
           <TabsTrigger value="general" className="border-0 data-[state=active]:bg-accent rounded-lg px-4 py-2">
             <Database className="w-4 h-4 mr-1.5" />
             通用知识库
@@ -176,6 +181,23 @@ export function KnowledgeBasesClient({ initialSummaries, channelData }: Props) {
             频道知识沉淀
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="personal" className="mt-4">
+          {personalKBs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personalKBs.map((kb) => (
+                <KBCard key={kb.id} kb={kb} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20">
+              <UserCircle className="w-10 h-10 text-gray-200 dark:text-white/20 mb-3" />
+              <p className="text-sm text-gray-400 dark:text-white/40">
+                暂无个人知识库，点击右上角创建
+              </p>
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="general" className="mt-4">
 

@@ -3,14 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { missions } from "@/db/schema/missions";
 import { savedConversations } from "@/db/schema/saved-conversations";
-import { desc, eq, or, and, sql } from "drizzle-orm";
+import { desc, eq, or, and, sql, inArray } from "drizzle-orm";
 import { getEmployees } from "@/lib/dal/employees";
 import { getCurrentUserProfile, getCurrentUserOrg } from "@/lib/dal/auth";
-import { getSkills } from "@/lib/dal/skills";
+import { getSkills, getSkillsWithBindCount } from "@/lib/dal/skills";
 import { getEmployeeKnowledgeBases } from "@/lib/dal/knowledge-bases";
 import { listTemplatesForHomepageByTab } from "@/lib/dal/workflow-templates-listing";
 import type { WorkflowTemplateRow } from "@/db/types";
 import { getMulanDisabledEmployees } from "@/app/actions/mulan-config";
+import { getAllBuiltinSkills } from "@/lib/skill-loader";
 import { HomeClient } from "./home-client";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,8 @@ export default async function HomePage() {
     documentCount: number;
   }> = [];
   let mulanWorkflows: (WorkflowTemplateRow & { __homepagePinnedAt?: Date | null })[] = [];
+  let builtinSkills: Array<{ slug: string; name: string; category: string; description: string }> = [];
+  let customSkills: Array<{ id: string; name: string; category: string; description: string; content?: string }> = [];
 
   try {
     const supabase = await createClient();
@@ -147,6 +150,40 @@ export default async function HomePage() {
       }
 
       mulanWorkflows = wfResult;
+
+      try {
+        builtinSkills = getAllBuiltinSkills().map((s) => ({
+          slug: s.slug,
+          name: s.name,
+          category: s.category,
+          description: s.description,
+        }));
+      } catch (err) {
+        console.error("[home] builtin skills load failed:", err);
+      }
+
+      try {
+        const allSkills = await getSkillsWithBindCount({ userId: user?.id, mode: "own" });
+        const customRows = allSkills.filter((s) => s.type === "custom");
+        const customIds = customRows.map((s) => s.id);
+        let contentMap = new Map<string, string | null>();
+        if (customIds.length > 0) {
+          const { skills: skillsTable } = await import("@/db/schema/skills");
+          const contentRows = await db.select({ id: skillsTable.id, content: skillsTable.content })
+            .from(skillsTable)
+            .where(inArray(skillsTable.id, customIds));
+          for (const r of contentRows) contentMap.set(r.id, r.content);
+        }
+        customSkills = customRows.map((s) => ({
+          id: s.id,
+          name: s.name,
+          category: s.category ?? "other",
+          description: s.description,
+          content: contentMap.get(s.id) ?? undefined,
+        }));
+      } catch (err) {
+        console.error("[home] custom skills load failed:", err);
+      }
     }
   } catch (err) {
     console.error("[home] data load failed:", err);
@@ -164,6 +201,8 @@ export default async function HomePage() {
         mulanSkills={mulanSkills}
         mulanKnowledgeBases={mulanKnowledgeBases}
         mulanWorkflows={mulanWorkflows}
+        builtinSkills={builtinSkills}
+        customSkills={customSkills}
       />
     </Suspense>
   );

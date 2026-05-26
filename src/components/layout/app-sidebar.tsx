@@ -106,14 +106,14 @@ interface NavItem extends SubItem { children?: SubItem[] }
 const NAV_ITEMS: NavItem[] = [
   { label: "首页", href: "/home", icon: Home },
   { label: "对话", href: "/chat", icon: MessageSquare },
+];
+
+const MORE_ITEMS: SubItem[] = [
   { label: "任务", href: "/missions", icon: ListTodo },
   { label: "员工", href: "/ai-employees", icon: Users },
   { label: "技能", href: "/skills", icon: Wrench },
   { label: "场景", href: "/workflows", icon: Workflow },
   { label: "知识", href: "/knowledge-bases", icon: BookMarked },
-];
-
-const MORE_ITEMS: SubItem[] = [
   { label: "穆兰配置", href: "/settings/mulan-config", icon: Settings },
 ];
 
@@ -121,7 +121,6 @@ const ADMIN_ITEMS: SubItem[] = [
   { label: "用户管理", href: "/admin/users", icon: Users },
   { label: "角色权限", href: "/admin/roles", icon: Shield },
   { label: "组织管理", href: "/admin/organizations", icon: Building2 },
-  { label: "内容管理", href: "/admin/content-management", icon: Database },
 ];
 
 /* ─── Helpers ─── */
@@ -411,15 +410,13 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const hasAllPerms = permissions.length === 0;
   const canAccessAdmin =
-    hasAllPerms ||
     permissions.includes("system:manage_users") ||
     permissions.includes("system:manage_orgs") ||
     permissions.includes("system:manage_roles");
 
   function canSeeItem(href: string) {
-    if (hasAllPerms) return true;
+    if (permissions.length === 0) return true;
     const perm = MENU_PERMISSION_MAP[href];
     return !perm || permissions.includes(perm);
   }

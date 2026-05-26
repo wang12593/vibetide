@@ -653,6 +653,18 @@ export const contentVisibilityEnum = pgEnum("content_visibility", [
   "org",
 ]);
 
+export const kbOwnerTypeEnum = pgEnum("kb_owner_type", [
+  "personal",
+  "org",
+]);
+
+export const kbDocumentStatusEnum = pgEnum("kb_document_status", [
+  "pending",
+  "parsing",
+  "done",
+  "failed",
+]);
+
 export const groupModeEnum = pgEnum("group_mode", ["serial", "parallel"]);
 
 export const participantRoleEnum = pgEnum("participant_role", [
