@@ -135,7 +135,7 @@ export interface UseChatStreamReturn {
     contentType: string;
     downloadUrl: string;
     objectKey: string;
-  }>, options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }) => Promise<void>;
+  }>, options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; conversationId?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }) => Promise<void>;
 
   /**
    * Execute a confirmed (possibly edited) intent.
@@ -458,7 +458,7 @@ export function useChatStream({
 
               const isLastStep = review.isLastStep === true;
               const reviewPrompt = isLastStep
-                ? `这是最后一步。请回复 **"确认"** 完成工作流，或输入修改意见。`
+                ? `这是最后一步。请回复 **"确认"** 完成场景，或输入修改意见。`
                 : `请回复 **"确认"** 继续下一步，或直接输入修改意见。`;
 
               setMessages((prev) => [...prev, {
@@ -640,7 +640,7 @@ export function useChatStream({
       downloadUrl: string;
       objectKey: string;
       contentType?: string;
-    }>, options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }) => {
+    }>, options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; conversationId?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }) => {
       // Reset multi-turn state when user sends a new message (not an answer to multi-turn)
       if (multiTurnState.active && !skipClarifyRef.current) {
         setMultiTurnState({ active: false, round: 0, history: [] });
@@ -672,7 +672,7 @@ export function useChatStream({
             : "";
           setMessages((prev) => [...prev, {
             role: "assistant",
-            content: `✅ 工作流全部完成！所有步骤已确认通过。${downloadLink}`,
+            content: `✅ 场景全部完成！所有步骤已确认通过。${downloadLink}`,
           }]);
           setStepReview(null);
           setIsStreaming(false);
@@ -814,7 +814,7 @@ export function useChatStream({
                 setIsStreaming(false);
                 const isLast = nextReview.isLastStep === true;
                 const prompt = isLast
-                  ? `这是最后一步。请回复 **"确认"** 完成工作流，或输入修改意见。`
+                  ? `这是最后一步。请回复 **"确认"** 完成场景，或输入修改意见。`
                   : `请回复 **"确认"** 继续下一步，或直接输入修改意见。`;
                 setMessages((prev) => [...prev, {
                   role: "assistant",
@@ -942,6 +942,7 @@ export function useChatStream({
         setIntentProgress([]);
         const isGroup = options?.isGroupChat || (!employeeSlug && !!getConversationId?.());
         const targetSlug = options?.targetEmployeeSlug || employeeSlug;
+        const activeConversationId = options?.conversationId || getConversationId?.();
         await executeChat(text, historyBeforeSend, "/api/chat/stream", {
           employeeSlug: targetSlug,
           message: text,
@@ -950,7 +951,7 @@ export function useChatStream({
             { role: "user" as const, content: text },
           ].slice(-10),
           ...(options?.intentContext ? { intentContext: options.intentContext } : {}),
-          ...(getConversationId?.() ? { conversationId: getConversationId() } : {}),
+          ...(activeConversationId ? { conversationId: activeConversationId } : {}),
         }, isGroup ? { isGroupChat: true } : undefined);
       };
 
@@ -1427,7 +1428,7 @@ export function useChatStream({
     ]);
 
     await executeIntentFn(
-      "继续执行工作流",
+      "继续执行场景",
       intentObj,
       { userEdited: false, resumeFromStep, priorStepOutput, reviewFeedback: feedback },
     );

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { workflowTemplates, skills } from "@/db/schema";
 import type { WorkflowStepDef } from "@/db/schema/workflows";
 import type { InputFieldDef } from "@/lib/types";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserOrg } from "@/lib/dal/auth";
@@ -33,6 +33,32 @@ function findBuiltinTemplateById(
   );
 }
 
+async function assertWorkflowMutationAccess(
+  workflowId: string,
+  userId: string,
+) {
+  const orgId = await getCurrentUserOrg();
+  if (!orgId) throw new Error("用户未关联组织");
+
+  const existing = await db.query.workflowTemplates.findFirst({
+    where: and(
+      eq(workflowTemplates.id, workflowId),
+      eq(workflowTemplates.organizationId, orgId),
+    ),
+  });
+  if (!existing) throw new Error("场景不存在");
+
+  const admin = await isSuperAdmin(userId);
+  if (existing.isBuiltin && !admin) {
+    throw new Error("内置场景仅管理员可修改");
+  }
+  if (!existing.isBuiltin && !admin && existing.createdBy !== userId) {
+    throw new Error("无权操作他人的个人场景");
+  }
+
+  return existing;
+}
+
 
 /**
  * Validate that every `type:"skill"` step references a real skill (by slug)
@@ -57,7 +83,7 @@ async function normalizeSkillSteps(
     ),
   );
   if (slugs.length === 0) {
-    throw new Error("工作流步骤必须绑定技能库中的技能");
+    throw new Error("场景步骤必须绑定技能库中的技能");
   }
 
   const rows = slugs.length
@@ -76,7 +102,7 @@ async function normalizeSkillSteps(
     .map((s) => s.config?.skillSlug || "(空)");
   if (missing.length > 0) {
     throw new Error(
-      `工作流步骤技能不存在于技能库：${[...new Set(missing)].join("、")}`,
+      `场景步骤技能不存在于技能库：${[...new Set(missing)].join("、")}`,
     );
   }
 
@@ -108,7 +134,11 @@ export async function createWorkflowTemplate(data: {
   description?: string;
   steps: WorkflowStepDef[];
 }) {
-  await requireAuth();
+  const user = await requireAuth();
+  const orgId = await getCurrentUserOrg();
+  if (!orgId || data.organizationId !== orgId) {
+    throw new Error("无权在当前组织外创建场景");
+  }
 
   const [template] = await db
     .insert(workflowTemplates)
@@ -117,6 +147,8 @@ export async function createWorkflowTemplate(data: {
       name: data.name,
       description: data.description,
       steps: data.steps,
+      isBuiltin: false,
+      createdBy: user.id,
     })
     .returning();
 
@@ -143,7 +175,8 @@ export async function updateWorkflowTemplate(
     promptTemplate?: string;
   }
 ) {
-  await requireAuth();
+  const user = await requireAuth();
+  await assertWorkflowMutationAccess(templateId, user.id);
 
   await db
     .update(workflowTemplates)
@@ -171,7 +204,8 @@ export async function updateWorkflowTemplate(
  * Delete a workflow template.
  */
 export async function deleteWorkflowTemplate(templateId: string) {
-  await requireAuth();
+  const user = await requireAuth();
+  await assertWorkflowMutationAccess(templateId, user.id);
 
   await db
     .delete(workflowTemplates)
@@ -321,17 +355,7 @@ export async function updateWorkflow(
   }
 ) {
   const user = await requireAuth();
-
-  // Verify the workflow exists. Builtin templates are normally read-only, but
-  // super admins can still edit them so product operators can hotfix shipped
-  // templates without a code release.
-  const existing = await db.query.workflowTemplates.findFirst({
-    where: eq(workflowTemplates.id, id),
-  });
-  if (!existing) throw new Error("工作流不存在");
-  if (existing.isBuiltin && !(await isSuperAdmin(user.id))) {
-    throw new Error("内置工作流仅管理员可修改");
-  }
+  await assertWorkflowMutationAccess(id, user.id);
 
   const patch = { ...data };
   if (data.steps) {
@@ -353,14 +377,7 @@ export async function updateWorkflow(
  */
 export async function deleteWorkflow(id: string) {
   const user = await requireAuth();
-
-  const existing = await db.query.workflowTemplates.findFirst({
-    where: eq(workflowTemplates.id, id),
-  });
-  if (!existing) throw new Error("工作流不存在");
-  if (existing.isBuiltin && !(await isSuperAdmin(user.id))) {
-    throw new Error("内置工作流仅管理员可删除");
-  }
+  await assertWorkflowMutationAccess(id, user.id);
 
   await db.delete(workflowTemplates).where(eq(workflowTemplates.id, id));
 
@@ -371,7 +388,8 @@ export async function deleteWorkflow(id: string) {
  * Toggle the isEnabled flag on a workflow.
  */
 export async function toggleWorkflowEnabled(id: string, enabled: boolean) {
-  await requireAuth();
+  const user = await requireAuth();
+  await assertWorkflowMutationAccess(id, user.id);
 
   await db
     .update(workflowTemplates)
@@ -401,12 +419,12 @@ export async function executeWorkflow(id: string) {
   const workflow = await db.query.workflowTemplates.findFirst({
     where: eq(workflowTemplates.id, id),
   });
-  if (!workflow) throw new Error("工作流不存在");
+  if (!workflow) throw new Error("场景不存在");
 
   // 2. Build structured instruction from skill-based steps
   const steps = (workflow.steps ?? []) as WorkflowStepDef[];
   if (steps.length === 0) {
-    throw new Error("该工作流未配置步骤，请编辑补全后再运行");
+    throw new Error("该场景未配置步骤，请编辑补全后再运行");
   }
 
   // 3. Build structured instruction
@@ -420,8 +438,8 @@ export async function executeWorkflow(id: string) {
     })
     .join("\n");
 
-  const userInstruction = `请按照以下工作流执行：\n${stepDescriptions}${
-    workflow.description ? `\n\n工作流说明：${workflow.description}` : ""
+  const userInstruction = `请按照以下场景执行：\n${stepDescriptions}${
+    workflow.description ? `\n\n场景说明：${workflow.description}` : ""
   }`;
 
   // 4. Create mission via startMission

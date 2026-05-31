@@ -15,7 +15,7 @@
 
 VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 8 个专职 AI 数字员工团队，协作完成内容生产全流程：热点监控→内容策划→采写→视频制作→质量审核→渠道分发→数据分析。
 
-**核心技术栈：** Next.js 16.1.6 + React 19 + TypeScript 5（strict）+ Supabase PostgreSQL + Drizzle ORM + AI SDK v6 + shadcn/ui + Tailwind CSS v4 + Framer Motion + Inngest
+**核心技术栈：** Next.js 16.1.6 + React 19 + TypeScript 5（strict）+ Supabase PostgreSQL + Drizzle ORM + AI SDK v6 + shadcn/ui + Tailwind CSS v4 + Framer Motion + BullMQ
 
 **项目规模：**
 - **44 个** Dashboard 路由模块
@@ -84,7 +84,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 |------|------|-----------|
 | AI 员工管理 | `/ai-employees`、`/employee/[id]` | 员工列表/创建/详情/技能绑定/知识库绑定/记忆管理 |
 | 技能管理 | `/skills` | 技能列表/详情/导入/导出/分类筛选 |
-| 工作流管理 | `/workflows` | 模板列表/创建/编辑/启动/步骤配置 |
+| 场景管理 | `/workflows` | 模板列表/创建/编辑/启动/步骤配置 |
 | 知识库 | `/knowledge-bases` | 创建/文档上传/URL 爬取/向量化/员工绑定 |
 | 文章管理 | `/articles` | 文章列表/编辑器/AI 分析/批注/大纲 |
 | 热点话题 | `/hot-topics` | 热榜数据展示/话题详情/趋势分析 |
@@ -117,7 +117,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 |--------|------|
 | 第三方 AI 模型内部逻辑 | Qwen3.5-35B-A3B 的推理质量由模型提供方保证，不测模型准确性 |
 | Supabase 基础设施 | 数据库高可用/备份由 Supabase 平台保证 |
-| Inngest 平台本身 | 任务调度引擎的可靠性由 Inngest 保证 |
+| BullMQ/Redis 基础设施 | 队列引擎和 Redis 服务可靠性由基础设施保障 |
 | Drizzle ORM 内部逻辑 | ORM 框架已自测，仅验证 SQL 生成结果 |
 | GPUStack 推理服务 | 内网部署的模型服务由运维团队保障 |
 | 旧版数据迁移 | 非当前版本范围 |
@@ -264,7 +264,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 
 **基础数据：**
 - `npm run db:seed` 执行数据库种子脚本
-- 预置 8 个内置 AI 员工 + 27+ 工作流模板 + 系统角色
+- 预置 8 个内置 AI 员工 + 27+ 场景模板 + 系统角色
 - 组织数据：至少 2 个组织（测试多租户隔离）
 
 **测试账号：**
@@ -326,7 +326,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 
 ```
 场景 A：对话→任务→发布
-  登录 → 首页穆兰对话 "帮我策划一篇深度报道" → 意图识别匹配工作流
+  登录 → 首页穆兰对话 "帮我策划一篇深度报道" → 意图识别匹配场景
   → 步骤 1/4（小雷·热点收集）→ 审批确认 → 步骤 2/4（小深·深度研究）
   → 审批确认 → 步骤 3/4（小文·报道撰写）→ 修改意见重跑 → 确认
   → 步骤 4/4（小审·质量审核）→ 确认 → 任务完成 → CMS 入库
@@ -373,7 +373,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 | 2 | 管理员无 /admin 入口 | P0 | 待修复 | 侧边栏渲染 SettingsButton |
 | 3 | /admin/* 操作失败 | P0 | 待修复 | admin layout + 数据加载 |
 | 4 | 任务无升级可见性入口 | P1 | 待修复 | 升级按钮功能 |
-| 8 | 意图识别跳过工作流 | P0 | 待修复 | **重点回归**：工作流优先匹配 |
+| 8 | 意图识别跳过场景 | P0 | 待修复 | **重点回归**：场景优先匹配 |
 | 9 | 两个"下一步"按钮 | P0 | 待修复 | ClarificationCard 不重复 |
 | 12 | 新建群聊无标题输入框 | P0 | 待修复 | 群聊创建表单 |
 
@@ -432,7 +432,7 @@ VibeTide（Vibe Media）是一个中文 AI 驱动的内容管理平台，管理 
 
 批次 1.3 — 核心对话链路
   ├── 意图识别（规则 + LLM）→ 正确路由
-  ├── 工作流优先匹配（非直接调 skill）
+  ├── 场景优先匹配（非直接调 skill）
   ├── SSE 流式输出正常
   └── 单聊不受群聊改动影响
 ```

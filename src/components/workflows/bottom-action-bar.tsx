@@ -47,7 +47,7 @@ export function BottomActionBar({
         {testRunning ? "运行中..." : "测试运行"}
       </button>
 
-      {/* 启用/禁用 — 对所有工作流类型都显示 */}
+      {/* 启用/禁用 — 对所有场景类型都显示 */}
       <button
         onClick={onToggleEnabled}
         className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm transition-colors cursor-pointer ${

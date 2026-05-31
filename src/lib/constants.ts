@@ -249,7 +249,7 @@ export const WORK_PREFERENCE_TEMPLATES = {
   },
   balanced: {
     label: "均衡模式",
-    description: "适度自主，定期汇报，标准工作流",
+    description: "适度自主，定期汇报，标准场景",
     preferences: {
       proactivity: "balanced",
       reportingFrequency: "hourly",
@@ -480,7 +480,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
- * 场景/工作流 category 在 UI tab 的展示顺序。
+ * 场景/场景 category 在 UI tab 的展示顺序。
  * 顺序=阅读优先级，与 workflowCategoryEnum (12 values) 一一对应。
  * B.1 Unified Scenario Workflow spec §6.3.
  */

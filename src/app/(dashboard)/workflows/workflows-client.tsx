@@ -74,7 +74,7 @@ export function WorkflowsClient({
     type: "success" | "error";
     message: string;
   } | null>(null);
-  // 运行我的工作流时的参数采集 dialog —— inputFields/promptTemplate 靠它生效
+  // 运行我的场景时的参数采集 dialog —— inputFields/promptTemplate 靠它生效
   const [launchTemplate, setLaunchTemplate] =
     useState<WorkflowTemplateRow | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export function WorkflowsClient({
       startTransition(async () => {
         try {
           await createWorkflowFromTemplate(templateId);
-          showFeedback("success", "已从模板创建工作流");
+          showFeedback("success", "已从模板创建场景");
           router.refresh();
         } catch (err) {
           showFeedback(
@@ -130,7 +130,7 @@ export function WorkflowsClient({
     (id: string) => {
       const wf = myWorkflows.find((w) => w.id === id);
       if (!wf) {
-        showFeedback("error", "工作流不存在");
+        showFeedback("error", "场景不存在");
         return;
       }
       // 统一弹 dialog 让用户填参数 / 确认启动
@@ -160,7 +160,7 @@ export function WorkflowsClient({
           const wf = myWorkflows.find((w) => w.id === id);
           if (wf) {
             await updateWorkflow(id, { isEnabled: !wf.isEnabled });
-            showFeedback("success", wf.isEnabled ? "工作流已禁用" : "工作流已启用");
+            showFeedback("success", wf.isEnabled ? "场景已禁用" : "场景已启用");
             router.refresh();
           }
         } catch (err) {
@@ -182,7 +182,7 @@ export function WorkflowsClient({
       startTransition(async () => {
         try {
           await deleteWorkflow(id);
-          showFeedback("success", "工作流已删除");
+          showFeedback("success", "场景已删除");
           router.refresh();
         } catch (err) {
           showFeedback(
@@ -215,10 +215,10 @@ export function WorkflowsClient({
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white/90 mb-1 flex items-center gap-2">
             <GitBranch className="w-6 h-6 text-gray-500 dark:text-white/50" />
-            工作流
+            场景
           </h1>
           <p className="text-sm text-gray-400 dark:text-white/40">
-            创建和管理自动化工作流程
+            创建和管理自动化场景程
           </p>
         </div>
         <button
@@ -226,21 +226,21 @@ export function WorkflowsClient({
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50/80 dark:bg-blue-500/[0.08] backdrop-blur-sm text-sm text-blue-600 dark:text-blue-400 border-0 cursor-pointer transition-all hover:bg-blue-100/90 dark:hover:bg-blue-500/[0.15] hover:text-blue-700 dark:hover:text-blue-300"
         >
           <Plus className="w-4 h-4" />
-          新建工作流
+          新建场景
         </button>
       </div>
 
-      {/* ── 我的工作流 ── */}
+      {/* ── 我的场景 ── */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-700 dark:text-white/70 mb-4">
-          我的工作流
+          我的场景
         </h2>
 
         {myWorkflows.length === 0 ? (
           <div className="bg-slate-50/80 dark:bg-white/[0.05] rounded-2xl py-12 flex flex-col items-center gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <Inbox className="w-10 h-10 text-gray-400 dark:text-white/30" />
             <p className="text-sm text-gray-500 dark:text-white/60">
-              还没有工作流，从模板开始或创建自定义工作流
+              还没有场景，从模板开始或创建自定义场景
             </p>
           </div>
         ) : (
@@ -374,8 +374,8 @@ export function WorkflowsClient({
       <ConfirmDialog
         open={!!deleteTargetId}
         onOpenChange={(o) => !o && setDeleteTargetId(null)}
-        title="删除工作流"
-        description="确定要删除该工作流吗？此操作不可恢复。"
+        title="删除场景"
+        description="确定要删除该场景吗？此操作不可恢复。"
         confirmText="删除"
         variant="danger"
         loading={isPending}

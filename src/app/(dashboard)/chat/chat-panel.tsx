@@ -245,7 +245,7 @@ interface ChatPanelProps {
       downloadUrl: string;
       objectKey: string;
     }>,
-    options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }
+    options?: { isGroupChat?: boolean; skipIntent?: boolean; targetEmployeeSlug?: string; conversationId?: string; intentContext?: { intentType: string; skills: string[]; taskDescription: string } }
   ) => void;
   onSelectScenario: (scenario: WorkflowTemplateRow) => void;
   onCancelScenario: () => void;
@@ -1084,6 +1084,37 @@ export function ChatPanel({
                           />
                         );
                       }
+                      if (pendingIntent.workflowId) {
+                        return (
+                          <div className="flex justify-center">
+                            <div className="max-w-md rounded-xl bg-white/70 dark:bg-gray-800/50 border border-gray-200/30 dark:border-gray-700/30 px-4 py-3 shadow-sm">
+                              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                <Sparkles size={15} className="text-blue-500" />
+                                推荐场景：{pendingIntent.workflowName || pendingIntent.summary}
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {pendingIntent.reasoning || "这个请求适合用可复用场景来执行。"}
+                              </p>
+                              <div className="mt-3 flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onIntentCancel?.()}
+                                  className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                                >
+                                  取消
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onIntentConfirm?.(pendingIntent)}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                                >
+                                  启动场景
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
                       if (needsGroupConfirmation(pendingIntent.steps)) {
                         return (
                           <IntentConfirmation
@@ -1102,8 +1133,15 @@ export function ChatPanel({
                                 mode: "serial",
                                 leaderEmployeeSlug: "leader",
                               });
-                              const task = encodeURIComponent(pendingIntent.originalMessage || pendingIntent.summary || "协作任务");
-                              window.location.href = `/chat?group=${id}&task=${task}`;
+                              const userMsg = pendingIntent.originalMessage || pendingIntent.summary || "协作任务";
+                              onIntentCancel?.();
+                              setTimeout(() => {
+                                onSendMessage(userMsg, undefined, {
+                                  skipIntent: true,
+                                  isGroupChat: true,
+                                  conversationId: id,
+                                });
+                              }, 100);
                             }}
                             onCancel={() => onIntentCancel?.()}
                             onStayHere={() => {
@@ -1164,9 +1202,20 @@ export function ChatPanel({
                               onStartChat={async () => {
                                 setRecommendLoading(true);
                                 try {
-                                  const userMsg = [...messages].reverse().find((m) => m.role === "user");
-                                  const task = encodeURIComponent(pendingIntent.originalMessage || step.taskDescription || pendingIntent.summary || "开始对话");
-                                  window.location.href = `/chat?employee=${step.employeeSlug}&task=${task}`;
+                                  const userMsg = pendingIntent.originalMessage || step.taskDescription || pendingIntent.summary || "开始对话";
+                                  setRecommendSheetOpen(false);
+                                  onIntentCancel?.();
+                                  setTimeout(() => {
+                                    onSendMessage(userMsg, undefined, {
+                                      skipIntent: true,
+                                      targetEmployeeSlug: step.employeeSlug,
+                                      intentContext: {
+                                        intentType: pendingIntent.intentType,
+                                        skills: [],
+                                        taskDescription: step.taskDescription || userMsg,
+                                      },
+                                    });
+                                  }, 100);
                                 } catch {}
                                 setRecommendLoading(false);
                               }}

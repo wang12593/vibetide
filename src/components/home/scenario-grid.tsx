@@ -44,7 +44,7 @@ import type { HomepageTabKey } from "@/lib/dal/workflow-templates-listing";
 // Task 2.3 — The custom-scenario type is retained as an export for any
 // lingering consumer, but the homepage grid no longer renders the
 // localStorage-backed "我的场景" chips. Custom workflows now live in the
-// "我的工作流" tab and are sourced from `workflow_templates`.
+// "我的场景" tab and are sourced from `workflow_templates`.
 export interface CustomScenario {
   id: string;
   name: string;
@@ -92,7 +92,7 @@ const TAB_ORDER: TabDef[] = [
   { key: "xiaoshen", label: "质量审核" },
   { key: "xiaofa", label: "渠道运营" },
   { key: "xiaoshu", label: "数据分析" },
-  { key: "custom", label: "我的工作流" },
+  { key: "custom", label: "我的场景" },
 ];
 
 /**
@@ -336,7 +336,7 @@ export function ScenarioGrid({
               >
                 <Workflow size={14} className="shrink-0 text-violet-500" />
                 <div>
-                  <p className="font-medium leading-tight">从零创建工作流</p>
+                  <p className="font-medium leading-tight">从零创建场景</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     完全自定义步骤
                   </p>
@@ -405,11 +405,11 @@ export function ScenarioGrid({
                 <div className="rounded-xl border border-dashed border-sky-200 p-8 text-center text-sm text-muted-foreground">
                   <p>
                     {tab.key === "custom"
-                      ? "还没有自定义工作流"
-                      : `${tab.label} 暂无预设工作流`}
+                      ? "还没有自定义场景"
+                      : `${tab.label} 暂无预设场景`}
                   </p>
                   <Button variant="link" asChild className="mt-2">
-                    <Link href="/workflows">前往工作流模块查看</Link>
+                    <Link href="/workflows">前往场景模块查看</Link>
                   </Button>
                 </div>
               ) : (

@@ -187,7 +187,7 @@ export function WorkflowDetailClient({ workflow }: WorkflowDetailClientProps) {
                   规格文档（SKILL.md）
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  baoyu 规范的场景工作流规格 · 双向同步（DB ⇌ workflows/{workflow.legacyScenarioKey ?? "?"}/SKILL.md）
+                  baoyu 规范的场景场景规格 · 双向同步（DB ⇌ workflows/{workflow.legacyScenarioKey ?? "?"}/SKILL.md）
                 </p>
               </div>
               {!mdEditing ? (
@@ -234,7 +234,7 @@ export function WorkflowDetailClient({ workflow }: WorkflowDetailClientProps) {
               </div>
             ) : (
               <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
-                <p>该工作流尚无规格文档。</p>
+                <p>该场景尚无规格文档。</p>
                 <p className="mt-2">
                   <Button variant="ghost" onClick={() => setMdEditing(true)}>
                     <Pencil size={14} className="mr-1" />

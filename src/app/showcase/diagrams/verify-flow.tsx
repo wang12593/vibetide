@@ -127,7 +127,7 @@ export function VerifyFlow() {
             {/* Path B */}
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                路径 B：工作流反馈（聚合学习）
+                路径 B：场景反馈（聚合学习）
               </p>
               <GlassCard variant="default" padding="sm">
                 <div className="space-y-1.5">

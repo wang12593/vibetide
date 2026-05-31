@@ -59,16 +59,24 @@ export async function getWorkflowTemplates(opts?: { userId?: string; mode?: "all
 /**
  * Get only user-created (non-builtin) workflows for a specific user.
  */
-export async function getMyWorkflows(userId: string) {
+export async function getMyWorkflows(
+  userId: string,
+  opts?: { isAdmin?: boolean },
+) {
   const orgId = await getCurrentUserOrg();
 
   const rows = await db.query.workflowTemplates.findMany({
     where: orgId
-      ? and(
-          eq(workflowTemplates.organizationId, orgId),
-          eq(workflowTemplates.isBuiltin, false),
-          eq(workflowTemplates.createdBy, userId)
-        )
+      ? opts?.isAdmin
+        ? and(
+            eq(workflowTemplates.organizationId, orgId),
+            eq(workflowTemplates.isBuiltin, false),
+          )
+        : and(
+            eq(workflowTemplates.organizationId, orgId),
+            eq(workflowTemplates.isBuiltin, false),
+            eq(workflowTemplates.createdBy, userId)
+          )
       : and(
           eq(workflowTemplates.isBuiltin, false),
           eq(workflowTemplates.createdBy, userId)

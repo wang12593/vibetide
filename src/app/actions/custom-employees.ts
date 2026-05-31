@@ -8,9 +8,9 @@ import {
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserOrg } from "@/lib/dal/auth";
-import { requireAuth, requireCurrentOrgId } from "@/lib/demo-auth";
+import { requireAuth } from "@/lib/demo-auth";
+import { isSuperAdmin } from "@/lib/rbac";
 
 // ---------------------------------------------------------------------------
 // Auth helpers
@@ -28,7 +28,12 @@ async function requireOrg(): Promise<{ userId: string; organizationId: string }>
 // Ownership check: employee must belong to org and be custom (is_preset = 0)
 // ---------------------------------------------------------------------------
 
-async function assertCustomEmployeeOwnership(orgId: string, employeeId: string) {
+async function assertCustomEmployeeOwnership(
+  orgId: string,
+  employeeId: string,
+  userId: string,
+  isAdmin: boolean,
+) {
   const emp = await db.query.aiEmployees.findFirst({
     where: and(
       eq(aiEmployees.id, employeeId),
@@ -37,6 +42,9 @@ async function assertCustomEmployeeOwnership(orgId: string, employeeId: string) 
   });
   if (!emp) throw new Error("数字员工不存在或无权操作");
   if (emp.isPreset !== 0) throw new Error("预设数字员工不可修改");
+  if (!isAdmin && emp.createdBy !== userId) {
+    throw new Error("无权操作他人的个人数字员工");
+  }
   return emp;
 }
 
@@ -53,7 +61,7 @@ export async function createCustomEmployee(input: {
   knowledgeBaseIds?: string[];
   visibility?: "private" | "org";
 }) {
-  const { organizationId } = await requireOrg();
+  const { userId, organizationId } = await requireOrg();
 
   const trimmedName = input.name.trim();
   if (!trimmedName) throw new Error("数字员工名称不能为空");
@@ -87,6 +95,7 @@ export async function createCustomEmployee(input: {
       authorityLevel: "executor",
       status: "idle",
       isPreset: 0,
+      createdBy: userId,
       visibility: (input.visibility === "private" ? "personal" : input.visibility) || "personal",
       workPreferences: workPreferences as typeof aiEmployees.$inferInsert.workPreferences,
     })
@@ -144,8 +153,9 @@ export async function updateCustomEmployee(
     visibility?: "private" | "org";
   },
 ) {
-  const { organizationId } = await requireOrg();
-  const existing = await assertCustomEmployeeOwnership(organizationId, employeeId);
+  const { userId, organizationId } = await requireOrg();
+  const admin = await isSuperAdmin(userId);
+  const existing = await assertCustomEmployeeOwnership(organizationId, employeeId, userId, admin);
 
   // Build updates object
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -238,8 +248,9 @@ export async function updateCustomEmployee(
 // ---------------------------------------------------------------------------
 
 export async function deleteCustomEmployee(employeeId: string) {
-  const { organizationId } = await requireOrg();
-  await assertCustomEmployeeOwnership(organizationId, employeeId);
+  const { userId, organizationId } = await requireOrg();
+  const admin = await isSuperAdmin(userId);
+  await assertCustomEmployeeOwnership(organizationId, employeeId, userId, admin);
 
   // CASCADE on employeeSkills and employeeKnowledgeBases handles cleanup
   await db.delete(aiEmployees).where(eq(aiEmployees.id, employeeId));
@@ -255,13 +266,20 @@ export async function deleteCustomEmployee(employeeId: string) {
 // ---------------------------------------------------------------------------
 
 export async function listCustomEmployees() {
-  const { organizationId } = await requireOrg();
+  const { userId, organizationId } = await requireOrg();
+  const admin = await isSuperAdmin(userId);
 
   const rows = await db.query.aiEmployees.findMany({
-    where: and(
-      eq(aiEmployees.organizationId, organizationId),
-      eq(aiEmployees.isPreset, 0),
-    ),
+    where: admin
+      ? and(
+          eq(aiEmployees.organizationId, organizationId),
+          eq(aiEmployees.isPreset, 0),
+        )
+      : and(
+          eq(aiEmployees.organizationId, organizationId),
+          eq(aiEmployees.isPreset, 0),
+          eq(aiEmployees.createdBy, userId),
+        ),
     orderBy: (emp, { desc }) => [desc(emp.createdAt)],
   });
 

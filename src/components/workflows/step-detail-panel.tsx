@@ -542,7 +542,7 @@ export function StepDetailPanel({
         )}
 
         {/* ── 参数配置 ──
-            用于把工作流启动时用户填写的输入字段（inputFields）绑定到本步骤
+            用于把场景启动时用户填写的输入字段（inputFields）绑定到本步骤
             调用工具/技能时的参数。值支持 Mustache 占位符 {{fieldName}}：
             运行时会用 mission.inputParams 里的真实值替换，并作为【调用参数】
             块追加到 task 指令里。这是避免 LLM 凭上下文"自己选参数"导致搜错
@@ -940,7 +940,7 @@ function ParameterValuePicker({
           </div>
           {inputFields.length === 0 ? (
             <p className="rounded-md bg-black/[0.03] dark:bg-white/[0.04] p-2 text-xs text-muted-foreground">
-              工作流还没配置输入字段，先到左侧「输入字段」区添加再来绑定。
+              场景还没配置输入字段，先到左侧「输入字段」区添加再来绑定。
             </p>
           ) : (
             <div className="space-y-0.5">

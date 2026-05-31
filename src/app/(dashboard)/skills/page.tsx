@@ -14,7 +14,7 @@ export default async function SkillsPage() {
     const admin = user ? await isSuperAdmin(user.id) : false;
     skills = await getSkillsWithBindCount({
       userId: user?.id,
-      mode: admin ? "all" : "org",
+      mode: admin ? "all" : "own",
     });
   } catch {
     skills = [];

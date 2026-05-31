@@ -5,7 +5,7 @@ context: |
   技术栈：Next.js 16.1.6 + React 19 + TypeScript 5 (strict) + Supabase PostgreSQL + Drizzle ORM 0.45.1
   AI SDK：Vercel AI SDK v6 (@ai-sdk/anthropic)
   UI：shadcn/ui (new-york) + Radix UI + Tailwind CSS v4 + Framer Motion + Lucide icons
-  后台任务：Inngest (event-driven workflows)
+  后台任务：BullMQ (Redis-backed job queues, node-cron scheduling)
   认证：Supabase Auth (email/password)
   Path alias：@/* → ./src/*
   所有 UI 文字为简体中文

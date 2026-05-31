@@ -192,7 +192,10 @@ export interface WorkflowPickerSkill {
  * org-scoped skills *and* global builtins; custom skills without a slug
  * (legacy rows) are excluded because steps need a slug to execute.
  */
-export async function listSkillsForWorkflowPicker(): Promise<WorkflowPickerSkill[]> {
+export async function listSkillsForWorkflowPicker(opts?: {
+  userId?: string;
+  isAdmin?: boolean;
+}): Promise<WorkflowPickerSkill[]> {
   const orgId = await getCurrentUserOrg();
   const skillScope = buildSkillScopeCondition(orgId);
 
@@ -203,6 +206,7 @@ export async function listSkillsForWorkflowPicker(): Promise<WorkflowPickerSkill
       name: skills.name,
       category: skills.category,
       type: skills.type,
+      createdBy: skills.createdBy,
       description: skills.description,
       version: skills.version,
     })
@@ -212,7 +216,11 @@ export async function listSkillsForWorkflowPicker(): Promise<WorkflowPickerSkill
 
   // Drop legacy rows without a slug — not pickable.
   const withSlug = rows.filter((r) => !!r.slug);
-  const scoped = preferScopedSkillRows(withSlug, orgId);
+  const scoped = preferScopedSkillRows(withSlug, orgId).filter((r) => {
+    if (r.type === "builtin") return true;
+    if (opts?.isAdmin) return true;
+    return !!opts?.userId && r.createdBy === opts.userId;
+  });
 
   return scoped.map((r) => ({
     slug: r.slug!,
@@ -224,7 +232,10 @@ export async function listSkillsForWorkflowPicker(): Promise<WorkflowPickerSkill
   }));
 }
 
-export async function getSkills(category?: SkillCategory): Promise<Skill[]> {
+export async function getSkills(
+  category?: SkillCategory,
+  opts?: { userId?: string; isAdmin?: boolean },
+): Promise<Skill[]> {
   const orgId = await getCurrentUserOrg();
   const skillScope = buildSkillScopeCondition(orgId);
 
@@ -242,7 +253,13 @@ export async function getSkills(category?: SkillCategory): Promise<Skill[]> {
     orderBy: (s, { asc }) => [asc(s.category), asc(s.name)],
   });
 
-  return preferScopedSkillRows(rows, orgId).map(mapSkillSummary);
+  const scoped = preferScopedSkillRows(rows, orgId).filter((r) => {
+    if (r.type === "builtin") return true;
+    if (opts?.isAdmin) return true;
+    return !!opts?.userId && (r as { createdBy?: string | null }).createdBy === opts.userId;
+  });
+
+  return scoped.map(mapSkillSummary);
 }
 
 export async function getSkillsWithBindCount(

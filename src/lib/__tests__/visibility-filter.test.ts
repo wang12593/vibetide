@@ -128,13 +128,13 @@ describe("assertContentOwnership", () => {
     ).not.toThrow();
   });
 
-  it("passes when createdBy is null — edge case", () => {
+  it("throws when personal content has no creator and user is not admin", () => {
     expect(() =>
       assertContentOwnership(
         { visibility: "personal", createdBy: null },
         "current-user"
       )
-    ).not.toThrow();
+    ).toThrow("无权操作无归属的个人内容");
   });
 
   it("passes when visibility is null — treat as org", () => {

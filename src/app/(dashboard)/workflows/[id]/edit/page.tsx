@@ -6,6 +6,7 @@ import { WorkflowEditor } from "@/components/workflows/workflow-editor";
 import { ErrorBoundary } from "@/components/workflows/error-boundary";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,12 @@ export default async function EditWorkflowPage({
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const admin = user ? await isSuperAdmin(user.id) : false;
 
   const [workflow, skills, employees] = await Promise.all([
     getWorkflowTemplate(id),
-    listSkillsForWorkflowPicker().catch((err) => { console.error("[workflows/edit] load skills failed:", err); return []; }),
-    getEmployees(user ? { userId: user.id } : undefined).catch((err) => { console.error("[workflows/edit] load employees failed:", err); return []; }),
+    listSkillsForWorkflowPicker(user ? { userId: user.id, isAdmin: admin } : undefined).catch((err) => { console.error("[workflows/edit] load skills failed:", err); return []; }),
+    getEmployees(user ? { userId: user.id, isAdmin: admin } : undefined).catch((err) => { console.error("[workflows/edit] load employees failed:", err); return []; }),
   ]);
   if (!workflow) return notFound();
 

@@ -12,6 +12,7 @@ import { listTemplatesForHomepageByTab } from "@/lib/dal/workflow-templates-list
 import type { WorkflowTemplateRow } from "@/db/types";
 import { getMulanDisabledEmployees } from "@/app/actions/mulan-config";
 import { getAllBuiltinSkills } from "@/lib/skill-loader";
+import { isSuperAdmin } from "@/lib/rbac";
 import { HomeClient } from "./home-client";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,7 @@ export default async function HomePage() {
 
     if (user) {
       let orgId: string | undefined;
+      const admin = await isSuperAdmin(user.id);
 
       try {
         const profile = await getCurrentUserProfile();
@@ -103,7 +105,7 @@ export default async function HomePage() {
           .where(eq(savedConversations.employeeSlug, "leader"))
           .orderBy(desc(savedConversations.updatedAt))
           .limit(10),
-        getEmployees({ userId: user.id }),
+        getEmployees({ userId: user.id, isAdmin: admin }),
       ]);
 
       try { disabledEmployeeSlugs = await getMulanDisabledEmployees(); } catch (err) { console.error("[home] data load failed:", err); }

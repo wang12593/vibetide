@@ -39,7 +39,7 @@ const LEFT_CARD: CardData = {
 const RIGHT_CARD: CardData = {
   badge: "WF",
   badgeColor: "bg-pink-500",
-  title: "工作流（灵活编排引擎）",
+  title: "场景（灵活编排引擎）",
   description: "跨职能协作的流程编排",
   scenarios: ["多专业领域协作", "标准化可复用流程", "需要审批节点", "步骤间数据传递"],
   features: ["自定义步骤序列", "DAG依赖管理", "Leader动态分配数字员工"],
@@ -109,7 +109,7 @@ export function SkillComparisonCards() {
       <motion.div variants={item}>
         <GlassCard variant="accent" padding="sm">
           <p className="text-sm leading-relaxed">
-            🔑 <span className="font-semibold">关键关系：</span>数字员工可以被工作流调度——工作流的每个步骤本质上就是调用某个 数字员工的某个技能。数字员工侧重深度，工作流侧重广度。
+            🔑 <span className="font-semibold">关键关系：</span>数字员工可以被场景调度——场景的每个步骤本质上就是调用某个 数字员工的某个技能。数字员工侧重深度，场景侧重广度。
           </p>
         </GlassCard>
       </motion.div>

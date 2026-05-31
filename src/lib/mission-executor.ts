@@ -70,12 +70,12 @@ async function generateLeaderCoordinationMessage(ctx: {
     })
     .join("\n");
 
-  const prompt = `你是"穆兰"（任务总监，项目管理与协调角色）。刚接到一个使用预设工作流模板的任务，你的职责是对团队用一段话说明：你如何理解这个任务、为什么这样分解、每一步谁来做、整体协作节奏是什么。
+  const prompt = `你是"穆兰"（任务总监，项目管理与协调角色）。刚接到一个使用预设场景模板的任务，你的职责是对团队用一段话说明：你如何理解这个任务、为什么这样分解、每一步谁来做、整体协作节奏是什么。
 
 # 任务信息
 - 标题：${ctx.missionTitle}
 - 用户诉求：${ctx.userInstruction}
-- 所用工作流模板：${ctx.templateName}
+- 所用场景模板：${ctx.templateName}
 
 # 本次分解与分派（已按模板 + 成员技能匹配好）
 ${stepLines}
@@ -84,7 +84,7 @@ ${stepLines}
 - 用第一人称"我"说话，语气专业、简洁、像真实 PM 在站会上发言
 - 200-350 字，一段到两段
 - 先说对用户诉求的理解，再说分解思路，最后点名每个关键步骤的承接人（不用 1/2/3 重新列表，自然嵌入句子）
-- 不要出现"根据模板"、"按工作流模板预设"这种机械话术
+- 不要出现"根据模板"、"按场景模板预设"这种机械话术
 - 不要用 Markdown 标题，不要用列表符号`;
 
   try {
@@ -276,7 +276,7 @@ export async function leaderPlanDirect(
           missionId,
           title: "任务分解与分配",
           description:
-            "任务总监根据用户意图与团队成员技能，给出本次工作流的分解思路与分派理由。",
+            "任务总监根据用户意图与团队成员技能，给出本次场景的分解思路与分派理由。",
           expectedOutput: null,
           assignedEmployeeId: mission.leaderEmployeeId,
           assignedRole: null,
@@ -615,25 +615,25 @@ async function executeTaskDirect(
     // landed under the "用户附加指示" section, far from the system contract.
     const skillBody = task.assignedRole ? loadSkillContent(task.assignedRole) : null;
 
-    // 工作流步骤强制绑定的技能工具：`task.assignedRole` = 步骤必须执行的 skillSlug。
+    // 场景步骤强制绑定的技能工具：`task.assignedRole` = 步骤必须执行的 skillSlug。
     // 若被分派的数字员工（常见于兜底到 leader 任务总监）没有预先绑定该技能，
     // `agent.tools` 里就不会包含对应工具，LLM 拿不到工具调用权限，只能按
     // 输出格式"幻觉"出一段看似真实的结果（已出现过 web_search 没被调用、
     // LLM 编造 OpenAI/苹果假新闻的事故）。
     // 这里将 task 所需的技能主动注入 agent.tools，确保工具始终可用 ——
-    // 工作流合同 > 数字员工画像。
+    // 场景合同 > 数字员工画像。
     if (task.assignedRole && !agent.tools.some((t) => t.name === task.assignedRole)) {
       agent.tools = [
         ...agent.tools,
         {
           name: task.assignedRole,
-          description: `工作流指定的执行技能：${task.title}`,
+          description: `场景指定的执行技能：${task.title}`,
           parameters: {},
         },
       ];
     }
 
-    // 把工作流层的上下文（用户表单参数 + 渲染后的 promptTemplate）加到每步
+    // 把场景层的上下文（用户表单参数 + 渲染后的 promptTemplate）加到每步
     // 指令里 —— 否则第一步的 LLM 看不到 "topic=CCBN, count=2" 这样的用户输入，
     // 会从步骤描述里的数字/关键词瞎猜，导致 web_search("2") 这类翻车。
     const missionInputParams =
@@ -642,7 +642,7 @@ async function executeTaskDirect(
         : null;
     const inputParamsBlock =
       missionInputParams && Object.keys(missionInputParams).length > 0
-        ? `【工作流输入参数】\n${Object.entries(missionInputParams)
+        ? `【场景输入参数】\n${Object.entries(missionInputParams)
             .map(
               ([k, v]) =>
                 `- ${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`,
@@ -650,7 +650,7 @@ async function executeTaskDirect(
             .join("\n")}`
         : "";
     const missionInstructionBlock = mission.userInstruction
-      ? `【本次工作流任务】\n${mission.userInstruction}`
+      ? `【本次场景任务】\n${mission.userInstruction}`
       : "";
 
     // ── 工具预执行（server-side pre-fetch）─────────────────────────────────
@@ -843,8 +843,8 @@ async function executeTaskDirect(
       ? preExecUsedTool
         ? `【工具调用说明】\nserver 端已用绑定参数调用了 \`${task.assignedRole}\`，真实结果在上面的【前置工具调用结果】块里。你的任务是**基于这些真实数据**按 SKILL.md 的要求做排序、筛选、摘要、分组等后续处理，直接产出最终输出。\n\n禁止：\n- 不要再调用 ${task.assignedRole}（参数相同，浪费 token）\n- 不要忽略或替换真实结果中的条目\n- 不要凭空增加未出现在结果中的条目（伪造来源、时间、数据点）\n- 若真实结果为空，如实报告"无命中"并给出下一步建议，不得用训练数据里的话题填充`
         : isToolRegistered(task.assignedRole)
-          ? `【工具调用强制要求】\n本步骤必须首先调用 \`${task.assignedRole}\` 工具。参数取值按以下优先级：\n1. 优先使用【调用参数】块里的值（若已提供）—— 这些是步骤作者显式绑定的真实参数，必须逐字使用，禁止自行改写；\n2. 若未提供【调用参数】，再从【工作流输入参数】里挑选合适字段（通常 query / topic / keyword 对应 topic_title 之类的文本字段）；\n3. 绝不能使用步骤名、技能描述里的关键词、或训练数据里的热门话题替代用户的真实输入。\n\n严禁跳过工具直接编写结果；严禁伪造来源、时间、数据。若工具返回空结果，如实报告空结果，不得替换为其他话题。`
-          : `【技能执行指引】\n本步骤的技能为 \`${task.assignedRole}\`，这是一个基于提示词的技能（无独立工具实现）。请根据系统提示中的技能指南和 SKILL.md 描述，结合工作流输入参数，直接生成符合技能要求的输出。不需要调用任何工具。`
+          ? `【工具调用强制要求】\n本步骤必须首先调用 \`${task.assignedRole}\` 工具。参数取值按以下优先级：\n1. 优先使用【调用参数】块里的值（若已提供）—— 这些是步骤作者显式绑定的真实参数，必须逐字使用，禁止自行改写；\n2. 若未提供【调用参数】，再从【场景输入参数】里挑选合适字段（通常 query / topic / keyword 对应 topic_title 之类的文本字段）；\n3. 绝不能使用步骤名、技能描述里的关键词、或训练数据里的热门话题替代用户的真实输入。\n\n严禁跳过工具直接编写结果；严禁伪造来源、时间、数据。若工具返回空结果，如实报告空结果，不得替换为其他话题。`
+          : `【技能执行指引】\n本步骤的技能为 \`${task.assignedRole}\`，这是一个基于提示词的技能（无独立工具实现）。请根据系统提示中的技能指南和 SKILL.md 描述，结合场景输入参数，直接生成符合技能要求的输出。不需要调用任何工具。`
       : "";
 
     const userInstructions = [
@@ -1643,7 +1643,7 @@ async function pauseForUserReview(
     const { generateText } = await import("ai");
     const result = await generateText({
       model,
-      prompt: `你是穆兰（任务总监）。以下是工作流刚完成的一组节点成果，请用3-5句话向用户简要汇报。\n\n${summaryParts}\n\n要求：简洁说明已完成什么、产出了什么。不超过150字。`,
+      prompt: `你是穆兰（任务总监）。以下是场景刚完成的一组节点成果，请用3-5句话向用户简要汇报。\n\n${summaryParts}\n\n要求：简洁说明已完成什么、产出了什么。不超过150字。`,
       maxOutputTokens: 300,
     });
     mulanSummary = result.text;

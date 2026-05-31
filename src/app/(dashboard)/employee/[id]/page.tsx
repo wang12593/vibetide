@@ -85,7 +85,7 @@ export default async function EmployeeProfilePage({
     await Promise.all([
       getRecentMemories(employee.dbId, 20, userId).catch(() => []),
       getUnprocessedFeedbackCount(employee.dbId, orgId).catch(() => 0),
-      // 2026-04-20 realignment — "日常工作流" 严格按 ownerEmployeeId 垂类归属
+      // 2026-04-20 realignment — "日常场景" 严格按 ownerEmployeeId 垂类归属
       // 过滤（之前用 defaultTeam 包含匹配，会把"协作成员"身份的场景也算进来，
       // 导致质量审核官显示"深度报道""系列策划"等无关场景）。
       orgId

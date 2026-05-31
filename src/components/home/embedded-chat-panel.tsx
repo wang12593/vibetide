@@ -699,6 +699,37 @@ export function EmbeddedChatPanel({
                 )}
                 {showIntentHere && chat.pendingIntent && !chat.intentLoading && !chat.multiTurnState.active && (() => {
                     const pi = chat.pendingIntent;
+                    if (pi.workflowId) {
+                      return (
+                        <div className="flex justify-center">
+                          <div className="max-w-md rounded-xl bg-white/70 dark:bg-gray-800/50 border border-gray-200/30 dark:border-gray-700/30 px-4 py-3 shadow-sm">
+                            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                              <Sparkles size={15} className="text-blue-500" />
+                              推荐场景：{pi.workflowName || pi.summary}
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {pi.reasoning || "这个请求适合用可复用场景来执行。"}
+                            </p>
+                            <div className="mt-3 flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={chat.cancelIntent}
+                                className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                              >
+                                取消
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => chat.executeIntent(chat.pendingMessage, pi, false)}
+                                className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                              >
+                                启动场景
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     if (needsGroupConfirmation(pi.steps)) {
                       return (
                         <IntentConfirmation
@@ -724,13 +755,31 @@ export function EmbeddedChatPanel({
                                 skills: s.skills,
                               })),
                             });
-                            const task = encodeURIComponent(userMsg);
-                            router.push(`/chat?group=${id}&task=${task}`);
+                            setConversationId(id);
+                            chat.cancelIntent();
+                            setTimeout(() => {
+                              chat.sendMessage(userMsg, undefined, {
+                                skipIntent: true,
+                                isGroupChat: true,
+                                conversationId: id,
+                              });
+                            }, 100);
                           }}
                           onCancel={chat.cancelIntent}
                           onSingleChat={(step) => {
-                            const task = encodeURIComponent(pi.originalMessage || lockedUserMessageRef.current || step.taskDescription || chat.pendingMessage);
-                            router.push(`/chat?employee=${step.employeeSlug}&task=${task}`);
+                            const userMsg = pi.originalMessage || lockedUserMessageRef.current || step.taskDescription || chat.pendingMessage;
+                            chat.cancelIntent();
+                            setTimeout(() => {
+                              chat.sendMessage(userMsg, undefined, {
+                                skipIntent: true,
+                                targetEmployeeSlug: step.employeeSlug,
+                                intentContext: {
+                                  intentType: pi.intentType,
+                                  skills: [],
+                                  taskDescription: step.taskDescription || userMsg,
+                                },
+                              });
+                            }, 100);
                           }}
                           onStayHere={() => {
                             const userMsg = pi.originalMessage || lockedUserMessageRef.current || chat.pendingMessage || pi.summary || "";
@@ -813,8 +862,20 @@ export function EmbeddedChatPanel({
                             onStartChat={async () => {
                               setRecommendLoading(true);
                               try {
-                                const task = encodeURIComponent(pi.originalMessage || lockedUserMessageRef.current || step.taskDescription || chat.pendingMessage);
-                                router.push(`/chat?employee=${step.employeeSlug}&task=${task}`);
+                                const userMsg = pi.originalMessage || lockedUserMessageRef.current || step.taskDescription || chat.pendingMessage;
+                                setRecommendSheetOpen(false);
+                                chat.cancelIntent();
+                                setTimeout(() => {
+                                  chat.sendMessage(userMsg, undefined, {
+                                    skipIntent: true,
+                                    targetEmployeeSlug: step.employeeSlug,
+                                    intentContext: {
+                                      intentType: pi.intentType,
+                                      skills: [],
+                                      taskDescription: step.taskDescription || userMsg,
+                                    },
+                                  });
+                                }, 100);
                               } catch {}
                               setRecommendLoading(false);
                             }}

@@ -98,7 +98,7 @@ export function RightSidebar() {
     { id: "employees", label: "AI 员工", icon: Users, content: <EmployeesSection /> },
     { id: "skills", label: "技能管理", icon: Wrench, content: <SkillsSection /> },
     { id: "knowledge", label: "知识库", icon: BookMarked, content: <KnowledgeSection /> },
-    { id: "workflows", label: "工作流", icon: Workflow, content: <WorkflowsSection router={router} /> },
+    { id: "workflows", label: "场景", icon: Workflow, content: <WorkflowsSection router={router} /> },
   ];
 
   return (
@@ -447,18 +447,18 @@ function WorkflowsSection({ router }: { router: ReturnType<typeof useRouter> }) 
         className="flex items-center gap-1.5 w-full rounded-md px-2 py-1.5 text-[12px] text-primary/70 hover:bg-accent hover:text-primary transition-colors cursor-pointer border-0 bg-transparent"
       >
         <Plus size={11} className="shrink-0" />
-        <span>新建工作流</span>
+        <span>新建场景</span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>新建工作流</DialogTitle>
+            <DialogTitle>新建场景</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>名称</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="输入工作流名称" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="输入场景名称" />
             </div>
             <div className="space-y-2">
               <Label>分类</Label>
@@ -475,7 +475,7 @@ function WorkflowsSection({ router }: { router: ReturnType<typeof useRouter> }) 
             </div>
             <div className="space-y-2">
               <Label>描述（可选）</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="描述工作流的用途" rows={3} />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="描述场景的用途" rows={3} />
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
             <Button onClick={handleSubmit} disabled={pending} className="w-full">

@@ -16,7 +16,6 @@ export const QUEUES = {
   research: new Queue("research", { connection }),
   scheduled: new Queue("scheduled", { connection }),
   publishing: new Queue("publishing", { connection }),
-  intentDispatch: new Queue("intent-dispatch", { connection }),
 } as const;
 
 export type QueueName = keyof typeof QUEUES;
@@ -26,7 +25,7 @@ export function createWorker(
   processor: Processor,
   opts?: { concurrency?: number },
 ) {
-  return new Worker(queueName, processor, {
+  return new Worker(QUEUES[queueName].name, processor, {
     connection,
     concurrency: opts?.concurrency ?? 5,
     removeOnComplete: { count: 100 },

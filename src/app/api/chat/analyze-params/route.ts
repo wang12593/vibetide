@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
     }
 
     const contextParts: string[] = [];
-    if (workflowName) contextParts.push(`匹配到的工作流：「${workflowName}」`);
-    if (workflowDescription) contextParts.push(`工作流描述：${workflowDescription}`);
+    if (workflowName) contextParts.push(`匹配到的场景：「${workflowName}」`);
+    if (workflowDescription) contextParts.push(`场景描述：${workflowDescription}`);
     if (taskContext) contextParts.push(`任务上下文：${taskContext}`);
 
     const contextBlock = contextParts.length > 0

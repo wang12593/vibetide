@@ -10,19 +10,19 @@ import { getLanguageModel } from "@/lib/agent/model-router";
 // ---------------------------------------------------------------------------
 
 function buildSystemPrompt(skillCatalog: string): string {
-  return `你是 智能协作空间 的工作流规划专家，帮助用户设计自动化内容生产工作流。
+  return `你是 智能协作空间 的场景规划专家，帮助用户设计自动化内容生产场景。
 
 ## 工作方式
 
-用户描述需求后，你直接生成工作流 JSON。如果用户描述非常简略（少于20字或只有1个关键词），先追问1个关键问题再生成。
+用户描述需求后，你直接生成场景 JSON。如果用户描述非常简略（少于20字或只有1个关键词），先追问1个关键问题再生成。
 
 ### 输出规则
 
 **始终输出纯 JSON 对象**（不需要 markdown 代码块，不要包裹在任何标记中）：
 
 {
-  "name": "工作流名称（5字以内）",
-  "description": "工作流一句话描述",
+  "name": "场景名称（5字以内）",
+  "description": "场景一句话描述",
   "category": "news|video|analytics|distribution|custom",
   "triggerType": "manual|scheduled",
   "triggerConfig": null,
@@ -235,7 +235,7 @@ export async function POST(req: Request) {
           send("error", {
             message: isTimeout
               ? "生成超时（AI 推理较慢），请稍后重试或简化需求描述"
-              : `工作流生成失败: ${err instanceof Error ? err.message : "未知错误"}`,
+              : `场景生成失败: ${err instanceof Error ? err.message : "未知错误"}`,
           });
         } finally {
           try {

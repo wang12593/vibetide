@@ -30,7 +30,7 @@ export function StartWorkflowDialog({
           <DialogTitle>功能迁移中</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-500 py-4">
-          工作流已迁移为任务系统，请使用新的任务入口。
+          场景已迁移为任务系统，请使用新的任务入口。
         </p>
       </DialogContent>
     </Dialog>

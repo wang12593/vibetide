@@ -52,7 +52,10 @@ export function assertContentOwnership(
   isAdmin?: boolean
 ): void {
   if (isAdmin) return;
-  if (item.visibility === "personal" && item.createdBy && item.createdBy !== userId) {
+  if (item.visibility === "personal" && !item.createdBy) {
+    throw new Error("无权操作无归属的个人内容");
+  }
+  if (item.visibility === "personal" && item.createdBy !== userId) {
     throw new Error("无权操作他人的个人内容");
   }
 }

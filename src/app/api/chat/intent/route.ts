@@ -2,19 +2,23 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import {
   aiEmployees,
+  workflowTemplates,
   organizations,
   userProfiles,
   employeeSkills,
   skills,
   intentLogs,
 } from "@/db/schema";
-import { eq, desc, inArray, asc } from "drizzle-orm";
+import { and, eq, desc, inArray, asc, or, sql } from "drizzle-orm";
 import {
   recognizeIntent,
   type IntentResult,
   type IntentMemoryEntry,
+  type ScenarioInfo,
 } from "@/lib/agent/intent-recognition";
 import { isLeaderSlug } from "@/lib/agent/mulan-router";
+import { buildEmployeeVisibilityCondition } from "@/lib/dal/visibility-filter";
+import { isSuperAdmin } from "@/lib/rbac";
 
 interface EmployeeSkillInfo {
   slug: string;
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   userId = user?.id ?? null;
+  const admin = userId ? await isSuperAdmin(userId) : false;
 
   let body: { message?: unknown; employeeSlug?: unknown; clarifiedParameters?: unknown; clarificationHistory?: unknown };
   try {
@@ -71,7 +76,14 @@ export async function POST(req: Request) {
     const orgId = await resolveOrgId(userId);
     const empRows = orgId
       ? await db.query.aiEmployees.findMany({
-          where: eq(aiEmployees.organizationId, orgId),
+          where: userId
+            ? buildEmployeeVisibilityCondition({
+                userId,
+                orgId,
+                table: aiEmployees,
+                isAdmin: admin,
+              })
+            : eq(aiEmployees.organizationId, orgId),
         })
       : [];
 
@@ -104,6 +116,31 @@ export async function POST(req: Request) {
       nickname: e.nickname ?? "",
       title: e.title ?? "",
       skills: skillsByEmp.get(e.id) || [],
+    }));
+
+    const scenarioRows = orgId
+      ? await db.query.workflowTemplates.findMany({
+          where: and(
+            eq(workflowTemplates.organizationId, orgId),
+            eq(workflowTemplates.isEnabled, true),
+            admin
+              ? sql`true`
+              : or(
+                  eq(workflowTemplates.isBuiltin, true),
+                  eq(workflowTemplates.isPublic, true),
+                  userId ? eq(workflowTemplates.createdBy, userId) : sql`false`,
+                ),
+          ),
+          limit: 50,
+        })
+      : [];
+
+    const availableScenarios: ScenarioInfo[] = scenarioRows.map((s) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      category: s.category,
+      defaultTeam: Array.isArray(s.defaultTeam) ? s.defaultTeam as string[] : [],
     }));
 
     const recentLogs = userId
@@ -139,6 +176,7 @@ export async function POST(req: Request) {
       userMemories,
       clarifiedParameters,
       clarificationHistory,
+      availableScenarios,
     );
 
     console.log("[chat/intent] RESULT: type=", intentResult.intentType, "conf=", intentResult.confidence, "steps=", intentResult.steps?.length, "needsCl=", intentResult.needsClarification);

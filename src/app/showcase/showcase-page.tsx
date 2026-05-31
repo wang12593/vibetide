@@ -110,7 +110,7 @@ export default function ShowcasePage() {
               </p>
               <p>
                 <strong className="text-foreground">智能体层</strong>
-                ：系统核心。包含 8 位 数字员工（垂类深度智能体）和工作流引擎（灵活编排），以及统一的对话中心作为人机交互入口。意图识别引擎在此层自动路由用户请求。
+                ：系统核心。包含 8 位 数字员工（垂类深度智能体）和场景引擎（灵活编排），以及统一的对话中心作为人机交互入口。意图识别引擎在此层自动路由用户请求。
               </p>
               <p>
                 <strong className="text-foreground">业务应用层</strong>
@@ -118,14 +118,14 @@ export default function ShowcasePage() {
               </p>
             </div>
             <div className="my-4 rounded-xl bg-primary/5 border border-primary/10 px-5 py-4 text-sm leading-relaxed">
-              🔑 <strong className="text-foreground">核心设计原则</strong>：上层应用不直接调用 LLM，而是通过智能中枢层间接驱动。数字员工是最小执行单元，工作流是编排单元。
+              🔑 <strong className="text-foreground">核心设计原则</strong>：上层应用不直接调用 LLM，而是通过智能中枢层间接驱动。数字员工是最小执行单元，场景是编排单元。
             </div>
           </SectionWrapper>
 
           <SectionWrapper id="ch1-relations">
             <SectionHeading>核心模块关系图</SectionHeading>
             <p className="text-muted-foreground leading-relaxed mb-4">
-              对话中心、意图识别引擎、数字员工、工作流引擎、Agent Assembly 以及能力基座层各模块之间的调用关系。箭头方向表示调用或数据流向。
+              对话中心、意图识别引擎、数字员工、场景引擎、Agent Assembly 以及能力基座层各模块之间的调用关系。箭头方向表示调用或数据流向。
             </p>
             <ModuleRelationship />
           </SectionWrapper>
@@ -135,7 +135,7 @@ export default function ShowcasePage() {
             <ChapterHeader
               number="CHAPTER 02"
               title="核心设计哲学"
-              subtitle="为什么要拆分出「技能」「数字员工」「工作流」三个独立概念？"
+              subtitle="为什么要拆分出「技能」「数字员工」「场景」三个独立概念？"
             />
           </SectionWrapper>
 
@@ -158,9 +158,9 @@ export default function ShowcasePage() {
           </SectionWrapper>
 
           <SectionWrapper id="ch2-compare">
-            <SectionHeading>数字员工 vs 工作流：两种智能体形态</SectionHeading>
+            <SectionHeading>数字员工 vs 场景：两种智能体形态</SectionHeading>
             <p className="text-muted-foreground leading-relaxed mb-4">
-              数字员工和工作流不是对立关系，而是互补协作。数字员工是<strong className="text-foreground">垂类深度智能体</strong>——拥有固定身份、技能组合和长期记忆；工作流是<strong className="text-foreground">灵活编排引擎</strong>——用户自定义步骤，按需组合不同数字员工的能力。
+              数字员工和场景不是对立关系，而是互补协作。数字员工是<strong className="text-foreground">垂类深度智能体</strong>——拥有固定身份、技能组合和长期记忆；场景是<strong className="text-foreground">灵活编排引擎</strong>——用户自定义步骤，按需组合不同数字员工的能力。
             </p>
             <SkillComparisonCards />
           </SectionWrapper>
@@ -236,7 +236,7 @@ export default function ShowcasePage() {
               用户在对话中心的自然语言输入，经过意图识别引擎三步处理：<strong className="text-foreground">构建分析上下文</strong>（收集数字员工列表+技能描述+历史对话）→ <strong className="text-foreground">LLM 结构化分析</strong>（识别意图类型、匹配最佳数字员工和技能）→ <strong className="text-foreground">校验与兜底</strong>（验证数字员工/技能存在性，无匹配时走通用对话）。
             </p>
             <div className="my-4 rounded-xl bg-accent/5 border border-accent/10 px-5 py-4 text-sm">
-              📌 <strong className="text-foreground">场景</strong>：用户输入被识别为 <code className="text-primary">multi_step_task</code> 意图类型，路由到工作流引擎，而非单一数字员工处理。
+              📌 <strong className="text-foreground">场景</strong>：用户输入被识别为 <code className="text-primary">multi_step_task</code> 意图类型，路由到场景引擎，而非单一数字员工处理。
             </div>
           </SectionWrapper>
 

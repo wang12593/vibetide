@@ -439,7 +439,7 @@ export function MissionsClient({
                     <p className="text-sm text-gray-500 dark:text-gray-400">选择任务场景，系统将自动匹配最佳团队配置</p>
                     {activeCategoryTabs.length === 0 ? (
                       <div className="text-center py-10 text-sm text-gray-400 dark:text-gray-500">
-                        暂无可用的工作流，请先到「工作流」页面创建或启用内置模板。
+                        暂无可用的场景，请先到「场景」页面创建或启用内置模板。
                       </div>
                     ) : (
                       <Tabs

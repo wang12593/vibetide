@@ -25,14 +25,13 @@ export default async function WorkflowsPage() {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const [mine, builtin, admin] = await Promise.all([
-        withTimeout(getMyWorkflows(user.id), []),
-        withTimeout(getBuiltinTemplates(), []),
+      const [admin, builtin] = await Promise.all([
         withTimeout(isSuperAdmin(user.id), false),
+        withTimeout(getBuiltinTemplates(), []),
       ]);
-      myWorkflows = mine;
-      builtinTemplates = builtin;
       isAdmin = admin;
+      myWorkflows = await withTimeout(getMyWorkflows(user.id, { isAdmin: admin }), []);
+      builtinTemplates = builtin;
     }
   } catch {
     // Graceful degradation — render empty state

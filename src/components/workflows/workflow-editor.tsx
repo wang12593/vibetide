@@ -185,7 +185,7 @@ export function WorkflowEditor({
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
-      toast.error("请先填写工作流名称");
+      toast.error("请先填写场景名称");
       return;
     }
     setSaving(true);
@@ -219,7 +219,7 @@ export function WorkflowEditor({
           isEnabled,
           defaultTeam: defaultTeam.length > 0 ? defaultTeam : undefined,
         });
-        // 创建成功 → 跳到该工作流的 edit 页（mode=edit），用户继续在同一个工作流上
+        // 创建成功 → 跳到该场景的 edit 页（mode=edit），用户继续在同一个场景上
         // 调整不会产生副本；同时让 toast 在新页面上展示（sonner 是全局 Toaster）。
         toast.success("保存成功");
         if (created?.id) {
@@ -349,7 +349,7 @@ export function WorkflowEditor({
             setName(e.target.value);
             stepsHook.setHasChanges(true);
           }}
-          placeholder="输入工作流名称"
+          placeholder="输入场景名称"
           className="max-w-sm text-base font-medium border-transparent bg-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.04] focus:bg-background focus:border-border transition-colors"
         />
 
@@ -433,7 +433,7 @@ export function WorkflowEditor({
                   })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  选择可以参与此工作流的数字员工。未选择时将使用所有可用员工。
+                  选择可以参与此场景的数字员工。未选择时将使用所有可用员工。
                 </p>
               </div>
 
@@ -487,7 +487,7 @@ export function WorkflowEditor({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {triggerType === "manual"
-                    ? "手动触发：用户手动启动工作流，运行时填写必要参数"
+                    ? "手动触发：用户手动启动场景，运行时填写必要参数"
                     : "定时任务：按 Cron 表达式自动执行（例：0 8 * * * 为每天 8:00）"}
                 </p>
               </div>

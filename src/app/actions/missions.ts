@@ -481,7 +481,7 @@ export async function retryMission(missionId: string) {
     title: `${original.title}（重新执行）`,
     scenario: original.scenario,
     userInstruction: original.userInstruction,
-    // 关键：保留原 mission 的工作流模板，否则重试会丢模板，
+    // 关键：保留原 mission 的场景模板，否则重试会丢模板，
     // 走 LLM 分解或派工兜底（5 步全砸 leader），跟首次执行体验完全不一致。
     workflowTemplateId: original.workflowTemplateId ?? undefined,
   });

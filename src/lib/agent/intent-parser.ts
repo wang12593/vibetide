@@ -61,7 +61,7 @@ export async function parseUserIntent(
     .map((e) => `- ${e.slug}: ${e.name}（${e.title}）`)
     .join("\n");
 
-  const prompt = `你是一个内容生产工作流规划助手。请分析以下用户输入，并生成最优的工作流步骤。
+  const prompt = `你是一个内容生产场景规划助手。请分析以下用户输入，并生成最优的场景步骤。
 
 选题：${topicTitle}
 场景：${scenario}
@@ -108,7 +108,7 @@ ${employeeList}
       return {
         ...parsed,
         suggestedSteps: DEFAULT_STEPS,
-        reasoning: parsed.reasoning + "（步骤验证失败，回退到默认工作流）",
+        reasoning: parsed.reasoning + "（步骤验证失败，回退到默认场景）",
       };
     }
 
@@ -121,7 +121,7 @@ ${employeeList}
       timeConstraint: "normal",
       requiredCapabilities: [],
       suggestedSteps: DEFAULT_STEPS,
-      reasoning: "意图解析失败，使用默认工作流。",
+      reasoning: "意图解析失败，使用默认场景。",
     };
   }
 }

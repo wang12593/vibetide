@@ -64,7 +64,7 @@ export default function RegisterPage() {
           <div className="mt-12 flex items-center justify-center gap-8 text-white/50 text-sm">
             <span>数字员工</span>
             <span className="w-1 h-1 rounded-full bg-white/30" />
-            <span>智能工作流</span>
+            <span>智能场景</span>
             <span className="w-1 h-1 rounded-full bg-white/30" />
             <span>知识库</span>
           </div>

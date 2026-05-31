@@ -1,5 +1,10 @@
 # Tasks
 
+> Superseded 2026-05-30 by `mulan-agent-routing-scenarios`.
+> This landing page change is intentionally not executed because the product
+> direction now removes the onboarding/landing entry and routes authenticated
+> users to the Mulan agent at `/home`.
+
 ## Phase 1: Foundation & Shared Components
 
 - [ ] **T01**: 创建动画基础组件 — `floating-orbs.tsx`（浮动光球）、`cursor-glow.tsx`（鼠标跟随光效）、`typewriter-text.tsx`（打字机）、`animated-counter.tsx`（数字计数器）、`tilt-card.tsx`（3D 倾斜卡片）、`shimmer-button.tsx`（光泽按钮）、`pipeline-node.tsx`（流水线节点）

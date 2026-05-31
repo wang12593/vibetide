@@ -12,7 +12,7 @@ export const TOC_ITEMS: TocItem[] = [
   { id: "ch1-relations", title: "模块关系图", level: 2 },
   { id: "ch2", title: "二、核心设计哲学", level: 1 },
   { id: "ch2-skills", title: "为什么需要「技能」", level: 2 },
-  { id: "ch2-compare", title: "数字员工 vs 工作流", level: 2 },
+  { id: "ch2-compare", title: "数字员工 vs 场景", level: 2 },
   { id: "ch3", title: "三、知识库体系", level: 1 },
   { id: "ch3-why", title: "为什么需要知识库", level: 2 },
   { id: "ch3-pipeline", title: "全链路流程", level: 2 },
@@ -52,7 +52,7 @@ export const ARCH_LAYERS: ArchLayer[] = [
     name: "智能体层",
     color: "indigo",
     modules: [
-      { name: "数字员工", highlight: true }, { name: "工作流引擎", highlight: true },
+      { name: "数字员工", highlight: true }, { name: "场景引擎", highlight: true },
       { name: "对话中心", highlight: true }, { name: "意图识别", highlight: true },
       { name: "任务中心", highlight: true },
     ],
@@ -144,7 +144,7 @@ export const IMPL_STATUS: StatusItem[] = [
   { feature: "熟练度影响Prompt行为", status: "done", note: "三档行为指导" },
   { feature: "熟练度影响Leader分配", status: "planned", note: "目前Leader只看技能名" },
   { feature: "数字员工直接对话", status: "done", note: "对话中心+意图识别" },
-  { feature: "工作流编排+DAG执行", status: "done", note: "模板→Mission→调度" },
+  { feature: "场景编排+DAG执行", status: "done", note: "模板→Mission→调度" },
   { feature: "Leader动态数字员工匹配", status: "done", note: "根据技能智能匹配" },
   { feature: "知识库三通道入库", status: "done", note: "手动/上传/URL" },
   { feature: "向量化+RAG检索", status: "done", note: "Jina 1024维" },
@@ -198,9 +198,9 @@ export interface GlossaryItem {
 
 export const GLOSSARY: GlossaryItem[] = [
   { term: "Agent Assembly", definition: "智能体组装——每次执行前，动态组装数字员工的技能、知识、记忆、工具为完整的 Agent" },
-  { term: "DAG", definition: "有向无环图——工作流任务的依赖关系结构，决定执行顺序" },
+  { term: "DAG", definition: "有向无环图——场景任务的依赖关系结构，决定执行顺序" },
   { term: "RAG", definition: "检索增强生成——执行时检索知识库相关片段注入 LLM 上下文" },
-  { term: "Mission", definition: "任务实例——工作流模板实例化后的具体执行单元" },
+  { term: "Mission", definition: "任务实例——场景模板实例化后的具体执行单元" },
   { term: "VerifyLearner", definition: "自我验证学习器——AI 对自身输出进行质量评估的模块" },
   { term: "learnedPatterns", definition: "学习模式——数字员工从历史反馈中提取的行为模式（JSONB 存储）" },
   { term: "7层提示词", definition: "身份→技能→权限→知识→风格→记忆→输出，分层构建的系统 Prompt" },

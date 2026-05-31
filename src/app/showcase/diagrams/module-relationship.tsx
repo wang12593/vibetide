@@ -28,7 +28,7 @@ interface FlowNode {
 const rows: { nodes: FlowNode[]; id: string }[] = [
   { id: "r0", nodes: [{ id: "chat", label: "对话中心", highlight: true }] },
   { id: "r1", nodes: [{ id: "intent", label: "意图识别引擎", highlight: true }] },
-  { id: "r2", nodes: [{ id: "employee", label: "数字员工", highlight: true }, { id: "workflow", label: "工作流引擎", highlight: true }] },
+  { id: "r2", nodes: [{ id: "employee", label: "数字员工", highlight: true }, { id: "workflow", label: "场景引擎", highlight: true }] },
   { id: "r3", nodes: [{ id: "assembly", label: "Agent Assembly", highlight: true }] },
   { id: "r4", nodes: [{ id: "skill", label: "技能系统" }, { id: "kb", label: "知识库" }, { id: "memory", label: "记忆系统" }] },
   { id: "r5", nodes: [{ id: "prompt", label: "7层提示词组装" }] },

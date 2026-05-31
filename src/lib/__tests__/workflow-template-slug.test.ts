@@ -13,7 +13,7 @@ describe("templateToScenarioSlug", () => {
   it("generates custom_${nanoid} when legacyScenarioKey is null", () => {
     const slug = templateToScenarioSlug({
       legacyScenarioKey: null,
-      name: "快讯工作流",
+      name: "快讯场景",
     });
     expect(slug).toMatch(/^custom_[A-Za-z0-9_-]{6}$/);
   });

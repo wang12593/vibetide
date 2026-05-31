@@ -73,7 +73,7 @@ export function MulanConfigClient({
   };
 
   const handleDeleteWF = async (id: string) => {
-    if (!confirm("确认删除此工作流？")) return;
+    if (!confirm("确认删除此场景？")) return;
     setSaving(true);
     try { await deleteWorkflow(id); } catch (err) { console.error(err); }
     setWorkflows((prev) => prev.filter((w) => w.id !== id));
@@ -180,7 +180,7 @@ export function MulanConfigClient({
   };
 
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "workflows", label: "场景/工作流", count: workflows.length },
+    { key: "workflows", label: "场景/场景", count: workflows.length },
     { key: "employees", label: "员工", count: employees.length },
     { key: "knowledge", label: "知识库", count: knowledgeBases.length },
   ];
@@ -211,7 +211,7 @@ export function MulanConfigClient({
       {tab === "workflows" && (
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-base">场景 / 工作流</CardTitle>
+            <CardTitle className="text-base">场景 / 场景</CardTitle>
             <button onClick={() => setShowAdd(showAdd === "wf" ? false : "wf")}
               className="px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700">
               {showAdd === "wf" ? "取消" : "+ 新建"}

@@ -167,7 +167,7 @@ export async function startMissionFromTemplate(
     })
     .returning({ id: missions.id });
 
-  // Bump workflow_templates run stats so the "我的工作流" card reflects the
+  // Bump workflow_templates run stats so the "我的场景" card reflects the
   // latest activity. Keeps parity with the legacy executeWorkflow() path.
   await db
     .update(workflowTemplates)

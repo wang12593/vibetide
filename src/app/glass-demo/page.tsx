@@ -182,7 +182,7 @@ export default function GlassDemoPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             { icon: Users, label: "数字员工", value: "8", hint: "全栈专家团" },
-            { icon: Zap, label: "场景模板", value: "24", hint: "开箱即用工作流" },
+            { icon: Zap, label: "场景模板", value: "24", hint: "开箱即用场景" },
             { icon: TrendingUp, label: "周产出效率", value: "+340%", hint: "相较传统团队" },
           ].map((c, i) => (
             <div key={i} className={`${s.glass} ${s.lift} p-7`}>

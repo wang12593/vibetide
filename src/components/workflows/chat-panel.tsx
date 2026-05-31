@@ -233,7 +233,7 @@ export function ChatPanel({ mode, onWorkflowGenerated }: ChatPanelProps) {
                   ...prev,
                   {
                     role: "ai",
-                    content: `已生成 ${newSteps.length} 个步骤的工作流「${generated.name}」，你可以在画布上查看和调整。`,
+                    content: `已生成 ${newSteps.length} 个步骤的场景「${generated.name}」，你可以在画布上查看和调整。`,
                     type: "result",
                   },
                 ]);
@@ -277,7 +277,7 @@ export function ChatPanel({ mode, onWorkflowGenerated }: ChatPanelProps) {
       {/* Header */}
       <div className="px-4 pt-5 pb-3">
         <h2 className="text-base font-semibold text-foreground">
-          创建您的自定义工作流
+          创建您的自定义场景
         </h2>
         <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
           描述您的任务，让 AI 自动完成
@@ -356,7 +356,7 @@ export function ChatPanel({ mode, onWorkflowGenerated }: ChatPanelProps) {
         {generating && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>AI 正在生成工作流...</span>
+            <span>AI 正在生成场景...</span>
           </div>
         )}
       </div>

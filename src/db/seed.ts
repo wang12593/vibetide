@@ -618,7 +618,7 @@ async function seed() {
   console.log("7. Inserting workflow templates...");
   const templatesData = [
     {
-      name: "快讯工作流",
+      name: "快讯场景",
       description: "突发新闻快速响应，15分钟内完成从监控到发布的全流程",
       category: "news" as const,
       icon: "Zap",
@@ -632,7 +632,7 @@ async function seed() {
       ],
     },
     {
-      name: "深度报道工作流",
+      name: "深度报道场景",
       description: "深度调研+数据分析+多媒体制作，高质量长文全流程",
       category: "deep" as const,
       icon: "FileSearch",

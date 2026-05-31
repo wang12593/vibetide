@@ -124,7 +124,7 @@ describe("页面导航 — 全量路由可达性", () => {
     { path: "/skills", name: "技能库" },
     { path: "/missions", name: "任务中心" },
     { path: "/chat", name: "对话中心" },
-    { path: "/workflows", name: "工作流" },
+    { path: "/workflows", name: "场景" },
     { path: "/knowledge-bases", name: "知识库" },
     { path: "/articles", name: "文章" },
     { path: "/publishing", name: "发布" },
@@ -246,21 +246,21 @@ describe("对话中心操作", () => {
   });
 });
 
-describe("工作流页面操作", () => {
-  it("工作流列表页应可访问", async () => {
+describe("场景页面操作", () => {
+  it("场景列表页应可访问", async () => {
     const { status } = await pageFetch("/workflows");
     expectValidPage(status);
   });
 
-  it("创建工作流子页面应可访问", async () => {
+  it("创建场景子页面应可访问", async () => {
     const { status } = await pageFetch("/workflows/new");
     expectValidPage(status);
   });
 
-  it("工作流生成 API 应可调用", async () => {
+  it("场景生成 API 应可调用", async () => {
     const { status } = await apiFetch("/api/workflows/generate", {
       method: "POST",
-      body: JSON.stringify({ description: "测试工作流" }),
+      body: JSON.stringify({ description: "测试场景" }),
     });
     expect([200, 400, 401, 500]).toContain(status);
   });

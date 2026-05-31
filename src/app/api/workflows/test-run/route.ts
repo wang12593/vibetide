@@ -24,7 +24,7 @@ import { renderScenarioTemplate } from "@/lib/scenario-template";
 //
 // 测试运行 ≡ 实际执行（设计原则）：同一套代码路径，保证用户在编辑器里点
 // "测试运行"看到的每一步结果，与点"运行"（真实启动 mission）后的每一步
-// 结果完全等同。这样才能用来调试工作流。
+// 结果完全等同。这样才能用来调试场景。
 //
 // 关键复用：
 //   - invokeToolDirectly / isToolRegistered  ← 跟 mission-executor 同源
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     }
 
     // inputParams：mission 层的语义与 mission-executor 对齐。用于后面
-    // Mustache 渲染、推断 query、构造【工作流输入参数】块。
+    // Mustache 渲染、推断 query、构造【场景输入参数】块。
     const inputParams: Record<string, unknown> = { ...(userInputs ?? {}) };
 
     // stringInputs：字符串化后的版本（供 Mustache 替换、prompt 显示用）。
@@ -94,14 +94,14 @@ export async function POST(req: Request) {
       : "";
 
     // mission-executor 里的 missionInstructionBlock：把 promptTemplate 渲染
-    // 结果当作"本次工作流任务"介绍。测试运行同样呈现给 agent。
+    // 结果当作"本次场景任务"介绍。测试运行同样呈现给 agent。
     const missionInstructionBlock = resolvedPromptTemplate
-      ? `【本次工作流任务】\n${resolvedPromptTemplate}`
+      ? `【本次场景任务】\n${resolvedPromptTemplate}`
       : "";
 
     const inputParamsBlock =
       Object.keys(inputParams).length > 0
-        ? `【工作流输入参数】\n${Object.entries(inputParams)
+        ? `【场景输入参数】\n${Object.entries(inputParams)
             .map(
               ([k, v]) =>
                 `- ${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`,
@@ -359,7 +359,7 @@ ${truncated}
                   ...agent.tools,
                   {
                     name: skillSlug,
-                    description: `工作流指定的执行技能：${skillName}`,
+                    description: `场景指定的执行技能：${skillName}`,
                     parameters: {},
                   },
                 ];
@@ -390,7 +390,7 @@ ${truncated}
                       .join("\n")}`
                   : "";
               const toolEnforcementBlock = skillSlug
-                ? `【工具调用要求】\n本步骤对应技能 \`${skillSlug}\`。参数来源优先级：\n1. 优先使用【调用参数】里的值（显式绑定），禁止自行改写；\n2. 否则从【工作流输入参数】里挑合适字段；\n3. 绝不能使用步骤名、技能描述里的关键词、或训练数据里的热门话题替代。\n\n严禁伪造来源、时间、数据。若工具返回空，如实报告。`
+                ? `【工具调用要求】\n本步骤对应技能 \`${skillSlug}\`。参数来源优先级：\n1. 优先使用【调用参数】里的值（显式绑定），禁止自行改写；\n2. 否则从【场景输入参数】里挑合适字段；\n3. 绝不能使用步骤名、技能描述里的关键词、或训练数据里的热门话题替代。\n\n严禁伪造来源、时间、数据。若工具返回空，如实报告。`
                 : "";
 
               const userInstructions = [

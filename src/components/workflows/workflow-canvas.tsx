@@ -67,7 +67,7 @@ export function WorkflowCanvas({
         <div className="w-full mb-6 rounded-xl bg-amber-500/10 p-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span className="text-xs font-medium">
-            预览模式 - 编辑或启用后将保存为您的工作流
+            预览模式 - 编辑或启用后将保存为您的场景
           </span>
         </div>
       )}

@@ -134,7 +134,7 @@ interface EmployeeProfileClientProps {
   unprocessedFeedbackCount?: number;
   /**
    * B.1 — workflow_templates bound to this employee via `defaultTeam`.
-   * These ARE the employee's scenarios in the unified model (场景 = 工作流).
+   * These ARE the employee's scenarios in the unified model (场景 = 场景).
    */
   employeeWorkflows?: WorkflowTemplateRow[];
   /** Whether the current user can write scenarios (ai:manage permission).
@@ -363,7 +363,7 @@ export function EmployeeProfileClient({
       </GlassCard>
 
       {/* B.1 Unified Scenario Workflow — workflow_templates bound to this
-          employee (场景 = 工作流). Clicking a card directly starts a mission
+          employee (场景 = 场景). Clicking a card directly starts a mission
           using `workflowTemplateId` dual-write. These are daily-capability
           cards, not per-article pickers. */}
       {employeeWorkflows.length > 0 && (
@@ -375,7 +375,7 @@ export function EmployeeProfileClient({
       )}
 
       {/* Legacy scenario workbench removed 2026-04-20 — employee_scenarios
-           table dropped (migration 20260420). 场景 = 工作流 in the unified
+           table dropped (migration 20260420). 场景 = 场景 in the unified
            model; see EmployeeScenarios tab above for workflow_templates. */}
 
       {/* Tabs */}
@@ -1356,7 +1356,7 @@ function EditProfileDialog({
 // ============================================================================
 // Renders workflow_templates bound to this employee as clickable cards.
 // Each card triggers `startMission` with `workflowTemplateId` dual-write and
-// navigates to the created mission. 场景 = 工作流 — these ARE the employee's
+// navigates to the created mission. 场景 = 场景 — these ARE the employee's
 // daily-capability scenarios (不是"选文章再挑模板"的 picker).
 
 const WORKFLOWS_COLLAPSED_COUNT = 12;
@@ -1390,7 +1390,7 @@ function EmployeeWorkflowsSection({
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            日常工作流
+            日常场景
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {employeeNickname}已固化的 {workflows.length} 个场景能力 — 点击立即启动

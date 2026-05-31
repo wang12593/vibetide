@@ -1366,7 +1366,7 @@ export function isToolRegistered(toolName: string): boolean {
 // ---------------------------------------------------------------------------
 // Tool parameter introspection (for step-config UI)
 //
-// 工作流步骤编辑器里的"参数配置"需要让用户从该步骤对应工具的真实参数列表
+// 场景步骤编辑器里的"参数配置"需要让用户从该步骤对应工具的真实参数列表
 // 里挑选，而不是手写 `query` / `maxResults` 这些字段名 —— 用户根本不知道该
 // 工具支持什么参数。这里用 zod v4 的 toJSONSchema 从已注册的 ToolSet 里反
 // 推出参数 schema，供 UI 消费。
@@ -1382,7 +1382,7 @@ export interface ToolParamSpec {
 }
 
 /**
- * 返回 ALL_TOOLS 里所有工具的参数 spec 映射（skillSlug → specs）。供工作流
+ * 返回 ALL_TOOLS 里所有工具的参数 spec 映射（skillSlug → specs）。供场景
  * 编辑器的 server 页面预计算后透传给客户端组件，避免客户端直接 import 这个
  * 文件（会拖进 db / drizzle 等 server-only 依赖）。
  */
@@ -1463,7 +1463,7 @@ export async function invokeToolDirectly(
   toolName: string,
   rawParams: Record<string, unknown>,
   /**
-   * 调用方注入的上下文 —— 用户在"参数配置"里不需要填的字段，由工作流
+   * 调用方注入的上下文 —— 用户在"参数配置"里不需要填的字段，由场景
    * 执行器（mission-executor / test-run 路由）从请求 / mission 带过来。
    * 目前主要用于需要 orgId 才能跑的工具（cms_publish / media_search 等
    * 多租户资源写入场景）。未被对应工具消费的字段会被 zod schema 忽略。

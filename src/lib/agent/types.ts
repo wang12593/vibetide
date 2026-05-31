@@ -175,6 +175,19 @@ export interface IntentStep {
   dependsOn?: number;
 }
 
+export type MulanRouteTarget =
+  | { kind: "llm"; reason: string }
+  | { kind: "employee"; employeeSlug: EmployeeId; reason: string; confidence: number }
+  | { kind: "scenario"; scenarioId: string; scenarioName?: string; reason: string; confidence: number }
+  | {
+      kind: "mission";
+      title: string;
+      employeeSlugs: EmployeeId[];
+      scenarioId?: string;
+      reason: string;
+      confidence: number;
+    };
+
 export interface ClarificationOption {
   label: string;
   value: string;
@@ -201,6 +214,8 @@ export interface IntentResult {
   workflowId?: string;
   workflowName?: string;
   executionMode?: "skill" | "workflow" | "auto";
+  /** Canonical Mulan route target. Kept alongside legacy fields during migration. */
+  routeTarget?: MulanRouteTarget;
   /** When required input fields are missing, the LLM can request clarification */
   needsClarification?: boolean;
   /** When true, frontend should call /api/chat/analyze-params to get dynamic questions */

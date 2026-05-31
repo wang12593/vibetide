@@ -160,7 +160,7 @@ export function ApprovalsClient({
     <div className="max-w-[1400px] mx-auto">
       <PageHeader
         title="审批中心"
-        description="集中管理所有工作流步骤的审批请求"
+        description="集中管理所有场景步骤的审批请求"
       />
 
       {/* Stats Cards */}
@@ -237,7 +237,7 @@ export function ApprovalsClient({
                 className="mx-auto mb-3 text-green-400"
               />
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                当前没有待审批的工作流步骤
+                当前没有待审批的场景步骤
               </p>
             </div>
           </GlassCard>
@@ -428,7 +428,7 @@ export function ApprovalsClient({
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-700/50">
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      工作流
+                      场景
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">
                       步骤

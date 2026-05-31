@@ -95,7 +95,7 @@ export function TestRunInputsDialog({
         <DialogHeader>
           <DialogTitle>填写测试输入</DialogTitle>
           <DialogDescription>
-            为避免模型空转造出无关内容，请先补齐工作流的输入字段再开始测试。
+            为避免模型空转造出无关内容，请先补齐场景的输入字段再开始测试。
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto space-y-4 py-1">

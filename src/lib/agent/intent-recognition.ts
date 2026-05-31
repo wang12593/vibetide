@@ -1,7 +1,6 @@
 import { generateText } from "ai";
 import { getLanguageModel } from "./model-router";
 import { EMPLOYEE_META, type EmployeeId } from "@/lib/constants";
-import { getAllBuiltinSkills, getBuiltinSkillSlugs } from "@/lib/skill-loader";
 
 export type {
   ChatIntentType,
@@ -27,6 +26,14 @@ interface EmployeeSkillInfo {
   skills: string[];
 }
 
+export interface ScenarioInfo {
+  id: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  defaultTeam?: string[];
+}
+
 function buildEmployeeCatalog(
   availableEmployees: EmployeeSkillInfo[]
 ): string {
@@ -39,16 +46,14 @@ function buildEmployeeCatalog(
     .join("\n");
 }
 
-function buildSkillCatalog(): string {
-  const byCategory = new Map<string, string[]>();
-  for (const s of getAllBuiltinSkills()) {
-    const list = byCategory.get(s.category) || [];
-    list.push(`${s.slug}(${s.name})`);
-    byCategory.set(s.category, list);
-  }
-
-  return Array.from(byCategory.entries())
-    .map(([cat, skills]) => `${cat}: ${skills.join(", ")}`)
+function buildScenarioCatalog(scenarios: ScenarioInfo[]): string {
+  if (scenarios.length === 0) return "- 暂无可用场景";
+  return scenarios
+    .slice(0, 30)
+    .map((s) => {
+      const team = s.defaultTeam?.length ? `，默认团队：${s.defaultTeam.join("、")}` : "";
+      return `- ${s.id}（${s.name}）：${s.description || "无描述"}${team}`;
+    })
     .join("\n");
 }
 
@@ -59,26 +64,27 @@ function buildFewShotExamples(memories: IntentMemoryEntry[]): string {
     .slice(0, 10)
     .map(
       (m, i) =>
-        `${i + 1}. 用户："${m.userMessage}" → 意图：${m.intentType}，技能：[${m.skills.join(",")}]${m.userEdited ? "（用户修正过）" : ""}`
+        `${i + 1}. 用户："${m.userMessage}" → 意图：${m.intentType}${m.userEdited ? "（用户修正过）" : ""}`
     )
     .join("\n");
 
   return `\n## 该用户的历史意图模式（参考，但不要生搬硬套）\n${examples}\n`;
 }
 
-const INTENT_PROMPT = `意图识别引擎（员工优先）。分析用户输入，确定最合适的数字员工来执行任务。
+const INTENT_PROMPT = `意图识别引擎（员工优先，其次场景）。分析用户输入，确定最合适的穆兰路由目标。
 
 ## 核心原则（最重要！）
-1. **优先匹配员工**：先确定"谁来做"，再确定"用什么技能"
-2. **简单任务派一人**：搜索→小乐，写文章→小文，分析→小策，数据→小数，审核→小鉴，发布→小发
-3. **复杂任务派多人**：涉及多个环节的任务（如"策划并制作短视频"）需要多个员工协作
-4. **穆兰不执行技能**：leader（穆兰）是调度者，不要在 steps 中使用 leader 作为执行者
+1. **优先匹配员工**：先确定"谁来做"，不要把技能作为路由目标
+2. **其次匹配场景**：当用户明确提到可复用流程、模板、场景名称，或任务更适合作为预设流程时，返回 workflowId/workflowName
+3. **简单任务派一人**：搜索→小乐，写文章→小文，分析→小策，数据→小数，审核→小鉴，发布→小发
+4. **复杂任务派多人或 Mission**：涉及多个环节的任务（如"策划并制作短视频"）需要多个员工协作
+5. **穆兰不执行技能**：leader（穆兰）是调度者，不要在 steps 中使用 leader 作为执行者
 
 ## 数字员工
 {EMPLOYEE_CATALOG}
 
-## 技能目录（供参考，技能由员工自行选择）
-{SKILL_CATALOG}
+## 可用场景
+{SCENARIO_CATALOG}
 {FEW_SHOT}
 ## 意图类型
 information_retrieval / content_creation / deep_analysis / data_analysis / content_review / media_production / publishing / general_chat
@@ -88,7 +94,8 @@ information_retrieval / content_creation / deep_analysis / data_analysis / conte
 - 闲聊/问候返回 general_chat 且 steps=[]
 - confidence: 明确>0.8, 较明确0.6-0.8, 模糊<0.6
 - ⚠️ **严禁编造不存在的数字员工**：steps 中的 employeeSlug 必须来自上面的员工列表
-- 每个步骤的 skills 尽量精简，选最相关的 1-3 个
+- steps 中 skills 必须返回 []，技能由员工或场景内部自行选择，穆兰 UI 不展示技能路由
+- 当命中场景时，设置 workflowId、workflowName、executionMode="workflow"
 
 ## 意图分类指南
 - information_retrieval：搜索、查找、获取信息。关键词：搜索、查、找、搜、看看、有什么
@@ -119,6 +126,9 @@ information_retrieval / content_creation / deep_analysis / data_analysis / conte
   "confidence": 0-1,
   "steps": [{"employeeSlug":"", "employeeName":"", "skills":[], "taskDescription":"", "dependsOn": null}],
   "reasoning": "简短推理（1-2句）",
+  "workflowId": null,
+  "workflowName": null,
+  "executionMode": "auto",
   "needsClarification": false,
   "clarificationQuestions": []
 }
@@ -173,14 +183,14 @@ function buildClarificationForIntent(intentType: ChatIntentType): ClarificationQ
   return questions[intentType] || [];
 }
 
-const INTENT_TO_EMPLOYEE: Record<string, { slug: string; skills: string[] }> = {
-  information_retrieval: { slug: "xiaolei", skills: ["web_search"] },
-  content_creation: { slug: "xiaowen", skills: ["content_generate"] },
-  deep_analysis: { slug: "xiaoce", skills: ["web_search", "web_deep_read"] },
-  data_analysis: { slug: "xiaoshu", skills: ["data_report"] },
-  content_review: { slug: "xiaoshen", skills: ["quality_review"] },
-  media_production: { slug: "xiaojian", skills: ["video_edit_plan"] },
-  publishing: { slug: "xiaofa", skills: ["publish_strategy"] },
+const INTENT_TO_EMPLOYEE: Record<string, { slug: string }> = {
+  information_retrieval: { slug: "xiaolei" },
+  content_creation: { slug: "xiaowen" },
+  deep_analysis: { slug: "xiaoce" },
+  data_analysis: { slug: "xiaoshu" },
+  content_review: { slug: "xiaoshen" },
+  media_production: { slug: "xiaojian" },
+  publishing: { slug: "xiaofa" },
 };
 
 const LEVEL0_RULES: Array<{
@@ -271,12 +281,71 @@ function complexTaskMatch(message: string) {
   return null;
 }
 
+function scenarioMatch(message: string, scenarios: ScenarioInfo[]) {
+  const trimmed = message.trim();
+  if (!trimmed || scenarios.length === 0) return null;
+  const wantsScenario = /场景|模板|流程|套路|方案|预设/.test(trimmed);
+  const normalized = trimmed.toLowerCase();
+  return scenarios.find((scenario) => {
+    const name = scenario.name.toLowerCase();
+    if (name && normalized.includes(name)) return true;
+    if (!wantsScenario) return false;
+    return !!scenario.description && normalized.includes(scenario.description.toLowerCase().slice(0, 12));
+  }) ?? null;
+}
+
 function isGreeting(message: string): boolean {
   const trimmed = message.trim();
   if (trimmed.length <= SHORT_CHAT_THRESHOLD && GREETING_PATTERNS.test(trimmed)) {
     return true;
   }
   return false;
+}
+
+function withRouteTarget(result: IntentResult): IntentResult {
+  if (result.routeTarget) return result;
+  if (result.intentType === "general_chat" && result.steps.length === 0) {
+    return {
+      ...result,
+      routeTarget: { kind: "llm", reason: result.reasoning || result.summary },
+    };
+  }
+  if (result.workflowId) {
+    return {
+      ...result,
+      routeTarget: {
+        kind: "scenario",
+        scenarioId: result.workflowId,
+        scenarioName: result.workflowName,
+        reason: result.reasoning || result.summary,
+        confidence: result.confidence,
+      },
+    };
+  }
+  if (result.steps.length > 1) {
+    return {
+      ...result,
+      routeTarget: {
+        kind: "mission",
+        title: result.summary,
+        employeeSlugs: result.steps.map((s) => s.employeeSlug),
+        reason: result.reasoning || result.summary,
+        confidence: result.confidence,
+      },
+    };
+  }
+  if (result.steps.length === 1) {
+    return {
+      ...result,
+      routeTarget: {
+        kind: "employee",
+        employeeSlug: result.steps[0].employeeSlug,
+        reason: result.reasoning || result.summary,
+        confidence: result.confidence,
+      },
+    };
+  }
+  return result;
 }
 
 export async function recognizeIntent(
@@ -286,15 +355,16 @@ export async function recognizeIntent(
   userMemories: IntentMemoryEntry[] = [],
   clarifiedParameters?: Record<string, string>,
   clarificationHistory?: Array<{ question: string; answer: string }>,
+  availableScenarios: ScenarioInfo[] = [],
 ): Promise<IntentResult> {
   if (isGreeting(message)) {
-    return {
+    return withRouteTarget({
       intentType: "general_chat",
       summary: "日常对话",
       confidence: 0.95,
       steps: [],
       reasoning: "检测到问候语，直接进入自由对话",
-    };
+    });
   }
 
   const complexMatch = complexTaskMatch(message);
@@ -306,7 +376,7 @@ export async function recognizeIntent(
         return {
           employeeSlug: emp.slug as EmployeeId,
           employeeName: emp.nickname,
-          skills: emp.skills.slice(0, 3),
+          skills: [],
           taskDescription: message,
         };
       })
@@ -322,13 +392,13 @@ export async function recognizeIntent(
       dependsOn: i === 0 ? undefined : i - 1,
     }));
 
-    return {
+    return withRouteTarget({
       intentType: complexMatch.intentType,
       summary: complexMatch.summary,
       confidence: 0.9,
       steps,
       reasoning: `复杂任务规则匹配，调度 ${complexMatch.employees.length} 个员工协作`,
-    };
+    });
   }
 
   const ruleResult = ruleBasedClassify(message);
@@ -345,44 +415,72 @@ export async function recognizeIntent(
       if (matchedEmp && ruleResult.confidence >= 0.85) {
         const needsDetail = checkNeedsClarification(message, ruleResult.intentType);
         if (needsDetail) {
-          return {
+          return withRouteTarget({
             intentType: ruleResult.intentType,
             summary: `${matchedEmp.nickname}将为您${INTENT_TYPE_LABELS[ruleResult.intentType] || ruleResult.intentType}`,
             confidence: ruleResult.confidence * 0.9,
             steps: [{
               employeeSlug: matchedEmp.slug as EmployeeId,
               employeeName: matchedEmp.nickname,
-              skills: mapping?.skills || [],
+              skills: [],
               taskDescription: message,
             }],
             reasoning: `Level 0 规则命中但需求细节不足，需要追问`,
             needsClarification: true,
             clarificationQuestions: buildClarificationForIntent(ruleResult.intentType),
-          };
+          });
         }
-      return {
+      return withRouteTarget({
         intentType: ruleResult.intentType,
         summary: `${matchedEmp.nickname}将为您${INTENT_TYPE_LABELS[ruleResult.intentType] || ruleResult.intentType}`,
         confidence: ruleResult.confidence,
         steps: [{
           employeeSlug: matchedEmp.slug as EmployeeId,
           employeeName: matchedEmp.nickname,
-          skills: mapping?.skills || [],
+          skills: [],
           taskDescription: message,
         }],
         reasoning: `Level 0 规则引擎命中，直接分派 ${matchedEmp.nickname}`,
-      };
+      });
     }
     }
   }
 
-  const skillCatalog = buildSkillCatalog();
+  const matchedScenario = scenarioMatch(message, availableScenarios);
+  if (matchedScenario) {
+    const steps = (matchedScenario.defaultTeam ?? [])
+      .map((slug, i) => {
+        const emp = availableEmployees.find((e) => e.slug === slug);
+        if (!emp || emp.slug === "leader") return null;
+        return {
+          employeeSlug: emp.slug as EmployeeId,
+          employeeName: emp.nickname,
+          skills: [],
+          taskDescription: message,
+          dependsOn: i === 0 ? undefined : i - 1,
+        };
+      })
+      .filter(Boolean) as IntentResult["steps"];
+
+    return withRouteTarget({
+      intentType: "deep_analysis",
+      summary: `推荐场景「${matchedScenario.name}」`,
+      confidence: 0.86,
+      steps,
+      reasoning: `未命中更明确的单员工路由，匹配到可复用场景「${matchedScenario.name}」`,
+      workflowId: matchedScenario.id,
+      workflowName: matchedScenario.name,
+      executionMode: "workflow",
+    });
+  }
+
   const employeeCatalog = buildEmployeeCatalog(availableEmployees);
+  const scenarioCatalog = buildScenarioCatalog(availableScenarios);
   const fewShot = buildFewShotExamples(userMemories.slice(0, 5));
 
   const systemPrompt = INTENT_PROMPT
-    .replace("{SKILL_CATALOG}", skillCatalog)
     .replace("{EMPLOYEE_CATALOG}", employeeCatalog)
+    .replace("{SCENARIO_CATALOG}", scenarioCatalog)
     .replace("{FEW_SHOT}", fewShot);
 
   const parameterBlock = clarifiedParameters && Object.keys(clarifiedParameters).length > 0
@@ -456,7 +554,7 @@ export async function recognizeIntent(
           {
             employeeSlug: current.slug as EmployeeId,
             employeeName: current.nickname,
-            skills: mapping?.skills || current.skills.slice(0, 3),
+            skills: [],
             taskDescription: message,
           },
         ];
@@ -464,13 +562,16 @@ export async function recognizeIntent(
       }
     }
 
-    const allSkillSlugs = getBuiltinSkillSlugs();
     for (const step of parsed.steps) {
-      step.skills = step.skills.filter((s) => allSkillSlugs.has(s));
+      step.skills = [];
     }
 
-    if (!parsed.workflowId) {
-      parsed.executionMode = "skill";
+    if (parsed.workflowId) {
+      const scenario = availableScenarios.find((s) => s.id === parsed.workflowId);
+      parsed.workflowName = parsed.workflowName || scenario?.name;
+      parsed.executionMode = "workflow";
+    } else {
+      parsed.executionMode = "auto";
     }
 
     if (parsed.needsClarification) {
@@ -493,15 +594,15 @@ export async function recognizeIntent(
       parsed.clarificationHistory = clarificationHistory;
     }
 
-    return parsed;
+    return withRouteTarget(parsed);
   } catch (err) {
     console.error("[intent-recognition] Failed:", err);
-    return {
+    return withRouteTarget({
       intentType: "general_chat",
       summary: "自由对话",
       confidence: 0.5,
       steps: [],
       reasoning: `意图识别失败，回退到自由对话模式。(${err instanceof Error ? err.message : "unknown"})`,
-    };
+    });
   }
 }

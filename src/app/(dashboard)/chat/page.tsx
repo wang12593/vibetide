@@ -8,6 +8,7 @@ import { getEmployees } from "@/lib/dal/employees";
 import { getSavedConversations } from "@/lib/dal/conversations";
 import { listTemplatesForHomepageByTab } from "@/lib/dal/workflow-templates-listing";
 import { getOrProvisionLeader } from "@/app/actions/missions";
+import { isSuperAdmin } from "@/lib/rbac";
 import { ChatCenterClient } from "./chat-center-client";
 import type { AIEmployee } from "@/lib/types";
 import type { SavedConversationRow, WorkflowTemplateRow } from "@/db/types";
@@ -23,8 +24,9 @@ export default async function ChatPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    const admin = user ? await isSuperAdmin(user.id) : false;
 
-    employees = await getEmployees({ userId: user?.id });
+    employees = await getEmployees(user ? { userId: user.id, isAdmin: admin } : undefined);
 
     if (user && employees.length > 0) {
       const hasLeader = employees.some((e) => e.id === "leader");
@@ -37,7 +39,7 @@ export default async function ChatPage() {
         const orgId = profile[0]?.organizationId;
         if (orgId) {
           await getOrProvisionLeader(orgId);
-          employees = await getEmployees({ userId: user.id });
+          employees = await getEmployees({ userId: user.id, isAdmin: admin });
         }
       }
     }

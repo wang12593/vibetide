@@ -509,7 +509,7 @@ export function HomeClient({
       await removeWorkflowFromMulan(wfId);
       setMulanWFs((prev) => prev.filter((w) => w.id !== wfId));
       startTransition(() => { router.refresh(); });
-    } catch (error) { console.error("解绑工作流失败:", error); }
+    } catch (error) { console.error("解绑场景失败:", error); }
     setPendingRemoveWFId(null);
   }, [router]);
 
@@ -741,7 +741,7 @@ export function HomeClient({
     const tabs: { key: ConfigTab; label: string; icon: React.ReactNode; count: number }[] = [
       { key: "employees", label: "员工", icon: <Users size={13} />, count: dispatchableEmployees.length },
       { key: "knowledge", label: "知识库", icon: <BookOpen size={13} />, count: knowledgeBases.length },
-      { key: "workflows", label: "工作流", icon: <Workflow size={13} />, count: mulanWFs.length },
+      { key: "workflows", label: "场景", icon: <Workflow size={13} />, count: mulanWFs.length },
     ];
 
     return (
@@ -973,7 +973,7 @@ export function HomeClient({
                   }) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       <Workflow size={24} className="mx-auto mb-2 opacity-50" />
-                      暂无工作流
+                      暂无场景
                     </div>
                   )}
                 </div>
@@ -984,14 +984,14 @@ export function HomeClient({
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
                   >
                     <Plus size={12} />
-                    {addingWorkflows ? "收起" : "添加工作流"}
+                    {addingWorkflows ? "收起" : "添加场景"}
                   </button>
                   <a
                     href="/workflows/new"
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
                   >
                     <Plus size={12} />
-                    新建工作流
+                    新建场景
                   </a>
                 </div>
 
@@ -1019,7 +1019,7 @@ export function HomeClient({
                       );
                     }) : (
                       <div className="text-center py-4 text-xs text-muted-foreground">
-                        所有工作流已关联
+                        所有场景已关联
                       </div>
                     )}
                   </div>

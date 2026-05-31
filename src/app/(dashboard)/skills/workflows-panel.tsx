@@ -80,7 +80,7 @@ export function WorkflowsPanel({ workflows }: WorkflowsPanelProps) {
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput
-          placeholder="搜索工作流名称或描述..."
+          placeholder="搜索场景名称或描述..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-72"
@@ -124,8 +124,8 @@ export function WorkflowsPanel({ workflows }: WorkflowsPanelProps) {
         <GlassCard className="py-16">
           <div className="text-center text-sm text-gray-400 dark:text-gray-500">
             {workflows.length === 0
-              ? "当前组织没有任何工作流。运行 `npx tsx src/db/seed.ts` 初始化。"
-              : "没有符合当前筛选的工作流。"}
+              ? "当前组织没有任何场景。运行 `npx tsx src/db/seed.ts` 初始化。"
+              : "没有符合当前筛选的场景。"}
           </div>
         </GlassCard>
       ) : (

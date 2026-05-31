@@ -195,7 +195,7 @@ export function PerformanceCharts({ trendData }: PerformanceChartsProps) {
         </button>
         {showDataSource && (
           <div className="mt-2 space-y-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-            <p><span className="text-gray-600 dark:text-gray-400 font-medium">任务完成：</span>工作流步骤执行完成时 +1 (workflow_steps)</p>
+            <p><span className="text-gray-600 dark:text-gray-400 font-medium">任务完成：</span>场景步骤执行完成时 +1 (workflow_steps)</p>
             <p><span className="text-gray-600 dark:text-gray-400 font-medium">准确率：</span>从 execution_logs 计算成功率 (成功次数/总次数)</p>
             <p><span className="text-gray-600 dark:text-gray-400 font-medium">平均响应：</span>从 execution_logs 计算平均执行耗时</p>
             <p><span className="text-gray-600 dark:text-gray-400 font-medium">满意度：</span>从 user_feedback 计算采纳率 (accept/总反馈)</p>

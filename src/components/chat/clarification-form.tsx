@@ -51,7 +51,7 @@ export default function ClarificationForm({
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">📋</span>
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">
-            匹配到工作流「{intent.workflowName || "协作任务"}」，请补充以下信息
+            匹配到场景「{intent.workflowName || "协作任务"}」，请补充以下信息
           </h3>
         </div>
 

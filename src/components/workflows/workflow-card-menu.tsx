@@ -29,7 +29,7 @@ export function WorkflowCardMenu({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="工作流操作菜单"
+          aria-label="场景操作菜单"
           onClick={(e) => e.stopPropagation()}
         >
           <MoreHorizontal size={14} />
@@ -43,7 +43,7 @@ export function WorkflowCardMenu({
           onClick={() => router.push(`/workflows/${templateId}`)}
         >
           <Pencil size={14} className="mr-2" />
-          编辑工作流
+          编辑场景
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() =>
@@ -51,7 +51,7 @@ export function WorkflowCardMenu({
           }
         >
           <Copy size={14} className="mr-2" />
-          复制为我的工作流
+          复制为我的场景
         </DropdownMenuItem>
         {onTogglePin && (
           <DropdownMenuItem onClick={onTogglePin}>

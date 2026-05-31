@@ -398,9 +398,9 @@ export async function rollbackSkillVersion(skillId: string, versionId: string) {
  * 删除一个 skill。DB 外键 cascade 会自动清 employee_skills / skill_versions /
  * skill_usage_records / skill_files。但 workflow_templates.steps 是 jsonb，
  * 无外键约束 —— 若存在引用必须先让用户从 workflow 里移除，避免产生僵尸引用
- * 导致后续工作流执行时找不到 skill。
+ * 导致后续场景执行时找不到 skill。
  *
- * @param force 跳过工作流引用校验（仅管理员维护场景使用）
+ * @param force 跳过场景引用校验（仅管理员维护场景使用）
  */
 export async function deleteSkill(id: string, opts?: { force?: boolean }) {
   const user = await requireAuth();
@@ -412,7 +412,7 @@ export async function deleteSkill(id: string, opts?: { force?: boolean }) {
 
   assertContentOwnership(existing, user.id);
 
-  // 检查工作流引用（非 force 模式下阻止删除）
+  // 检查场景引用（非 force 模式下阻止删除）
   if (!opts?.force && existing.slug) {
     const referencingWorkflows = await findWorkflowsReferencingSkill(
       existing.slug,
@@ -428,7 +428,7 @@ export async function deleteSkill(id: string, opts?: { force?: boolean }) {
           ? `等 ${referencingWorkflows.length} 个`
           : "";
       throw new Error(
-        `无法删除：该技能被工作流「${names}${more}」引用，请先在这些工作流中移除相关步骤后再删除。`,
+        `无法删除：该技能被场景「${names}${more}」引用，请先在这些场景中移除相关步骤后再删除。`,
       );
     }
   }
@@ -440,7 +440,7 @@ export async function deleteSkill(id: string, opts?: { force?: boolean }) {
 }
 
 /**
- * 查找引用了指定 skill slug 的工作流（在 steps jsonb 里扫 config.skillSlug）。
+ * 查找引用了指定 skill slug 的场景（在 steps jsonb 里扫 config.skillSlug）。
  * 仅在 organization_id 范围内搜索。
  */
 async function findWorkflowsReferencingSkill(

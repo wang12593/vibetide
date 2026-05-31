@@ -41,8 +41,8 @@ describe("routeByIntent", () => {
     expect(routeByIntent("开始写稿")).toBe("xiaowen");
   });
 
-  it("routes 审核 to xiaojian", () => {
-    expect(routeByIntent("请审核一下")).toBe("xiaojian");
+  it("routes 审核 to xiaoshen", () => {
+    expect(routeByIntent("请审核一下")).toBe("xiaoshen");
   });
 
   it("routes 策划 to xiaoce", () => {

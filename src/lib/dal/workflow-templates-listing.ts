@@ -150,7 +150,7 @@ export async function findTemplateByNameOrSlug(
  *
  * - `"featured"` —— 主流场景 tab（新增，is_featured=true 过滤）
  * - `EmployeeId` —— 8 数字员工职能 tab（xiaolei / xiaoce / ... / xiaoshu）
- * - `"custom"` —— 我的工作流 tab（is_builtin=false）
+ * - `"custom"` —— 我的场景 tab（is_builtin=false）
  */
 export type HomepageTabKey = "featured" | EmployeeId | "custom";
 
@@ -158,7 +158,7 @@ export type HomepageTabKey = "featured" | EmployeeId | "custom";
  * Unified homepage-grid query. 替代原 `listTemplatesForHomepageByEmployee`。
  *
  * - `"featured"`：`is_featured=true AND is_public=true`
- * - `"custom"`：`is_builtin=false AND created_by=userId`（= /workflows 页 "我的工作流" 语义）
+ * - `"custom"`：`is_builtin=false AND created_by=userId`（= /workflows 页 "我的场景" 语义）
  * - EmployeeId：`owner_employee_id=<id> AND is_public=true`
  *
  * `"custom"` 分支需要 `opts.userId`；若未提供则返回 []（未登录不显示"我的"）。
