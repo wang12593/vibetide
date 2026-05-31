@@ -4,14 +4,15 @@ import {
   buildEmployeeVisibilityCondition,
   assertContentOwnership,
 } from "@/lib/dal/visibility-filter";
+import { aiEmployees, knowledgeBases } from "@/db/schema";
 
 describe("buildVisibilityCondition", () => {
   const userId = "user-1";
   const orgId = "org-1";
   const table = {
-    organizationId: "org_id_col",
-    createdBy: "created_by_col",
-    visibility: "visibility_col",
+    organizationId: knowledgeBases.organizationId,
+    createdBy: knowledgeBases.createdBy,
+    visibility: knowledgeBases.visibility,
   };
 
   it("builds 'own' mode condition — returns a non-null SQL expression", async () => {
@@ -61,10 +62,10 @@ describe("buildEmployeeVisibilityCondition", () => {
   const userId = "user-1";
   const orgId = "org-1";
   const table = {
-    organizationId: "org_id_col",
-    createdBy: "created_by_col",
-    visibility: "visibility_col",
-    isPreset: "is_preset_col",
+    organizationId: aiEmployees.organizationId,
+    createdBy: aiEmployees.createdBy,
+    visibility: aiEmployees.visibility,
+    isPreset: aiEmployees.isPreset,
   };
 
   it("returns a SQL expression for admin (org scope only)", () => {

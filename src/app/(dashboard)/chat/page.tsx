@@ -53,6 +53,7 @@ export default async function ChatPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
+      const admin = await isSuperAdmin(user.id);
       savedConversations = await getSavedConversations(user.id);
 
       const profile = await db
@@ -66,7 +67,7 @@ export default async function ChatPage() {
         const slugs = employees.map((e) => e.id as EmployeeId);
         const results = await Promise.all(
           slugs.map((slug) =>
-            listTemplatesForHomepageByTab(orgId, slug).catch(
+            listTemplatesForHomepageByTab(orgId, slug, { userId: user.id, isAdmin: admin }).catch(
               () => [] as WorkflowTemplateRow[],
             ),
           ),

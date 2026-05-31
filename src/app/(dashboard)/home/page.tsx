@@ -5,8 +5,8 @@ import { missions } from "@/db/schema/missions";
 import { savedConversations } from "@/db/schema/saved-conversations";
 import { desc, eq, or, and, sql, inArray } from "drizzle-orm";
 import { getEmployees } from "@/lib/dal/employees";
-import { getCurrentUserProfile, getCurrentUserOrg } from "@/lib/dal/auth";
-import { getSkills, getSkillsWithBindCount } from "@/lib/dal/skills";
+import { getCurrentUserProfile } from "@/lib/dal/auth";
+import { getSkillsWithBindCount } from "@/lib/dal/skills";
 import { getEmployeeKnowledgeBases } from "@/lib/dal/knowledge-bases";
 import { listTemplatesForHomepageByTab } from "@/lib/dal/workflow-templates-listing";
 import type { WorkflowTemplateRow } from "@/db/types";
@@ -133,7 +133,7 @@ export default async function HomePage() {
       const leaderEmployee = employees.find((e) => e.id === "leader");
       const [kbResult, wfResult] = await Promise.all([
         leaderEmployee ? getEmployeeKnowledgeBases(leaderEmployee.dbId).catch(() => []) : Promise.resolve([]),
-        orgId ? listTemplatesForHomepageByTab(orgId, "leader").catch(() => []) : Promise.resolve([]),
+        orgId ? listTemplatesForHomepageByTab(orgId, "leader", { userId: user.id, isAdmin: admin }).catch(() => []) : Promise.resolve([]),
       ]);
 
       if (leaderEmployee) {
@@ -168,7 +168,7 @@ export default async function HomePage() {
         const allSkills = await getSkillsWithBindCount({ userId: user?.id, mode: "own" });
         const customRows = allSkills.filter((s) => s.type === "custom");
         const customIds = customRows.map((s) => s.id);
-        let contentMap = new Map<string, string | null>();
+        const contentMap = new Map<string, string | null>();
         if (customIds.length > 0) {
           const { skills: skillsTable } = await import("@/db/schema/skills");
           const contentRows = await db.select({ id: skillsTable.id, content: skillsTable.content })

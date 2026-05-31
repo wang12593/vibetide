@@ -11,6 +11,7 @@ import {
 } from "../group-router";
 
 const PARTICIPANTS = [
+  { participantId: "leader", participantType: "ai_employee" },
   { participantId: "xiaowen", participantType: "ai_employee" },
   { participantId: "xiaojian", participantType: "ai_employee" },
   { participantId: "xiaoce", participantType: "ai_employee" },
@@ -21,6 +22,10 @@ const PARTICIPANTS = [
 describe("routeByMention", () => {
   it("routes to mentioned employee", () => {
     expect(routeByMention("@小文 写稿", PARTICIPANTS)).toBe("xiaowen");
+  });
+
+  it("routes @穆兰 to leader", () => {
+    expect(routeByMention("@穆兰 帮我协调一下", PARTICIPANTS)).toBe("leader");
   });
 
   it("returns null when no mention", () => {

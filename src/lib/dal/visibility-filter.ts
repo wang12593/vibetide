@@ -1,14 +1,14 @@
 import { and, or, eq, type SQL } from "drizzle-orm";
-import { contentVisibilityEnum } from "@/db/schema/enums";
+import type { AnyColumn } from "drizzle-orm/column";
 
 export type VisibilityTable = {
-  organizationId: any;
-  createdBy: any;
-  visibility: any;
+  organizationId: AnyColumn;
+  createdBy: AnyColumn;
+  visibility: AnyColumn;
 };
 
 export type EmployeeVisibilityTable = VisibilityTable & {
-  isPreset: any;
+  isPreset: AnyColumn;
 };
 
 export async function buildVisibilityCondition(opts: {

@@ -167,9 +167,9 @@ export type HomepageTabKey = "featured" | EmployeeId | "custom";
 export async function listTemplatesForHomepageByTab(
   orgId: string,
   tab: HomepageTabKey,
-  opts?: { userId?: string },
+  opts?: { userId?: string; isAdmin?: boolean },
 ): Promise<(WorkflowTemplateRow & { __homepagePinnedAt?: Date | null })[]> {
-  if (tab === "custom" && !opts?.userId) {
+  if (tab === "custom" && !opts?.userId && !opts?.isAdmin) {
     return [];
   }
 
@@ -192,14 +192,30 @@ export async function listTemplatesForHomepageByTab(
   if (tab === "featured") {
     conds.push(eq(workflowTemplates.isPublic, true));
     conds.push(eq(workflowTemplates.isFeatured, true));
+    if (!opts?.isAdmin) {
+      conds.push(
+        opts?.userId
+          ? or(eq(workflowTemplates.isBuiltin, true), eq(workflowTemplates.createdBy, opts.userId))!
+          : eq(workflowTemplates.isBuiltin, true),
+      );
+    }
   } else if (tab === "custom") {
     // 与 /workflows 页 getMyWorkflows 语义一致：isBuiltin=false AND createdBy=userId
     conds.push(eq(workflowTemplates.isBuiltin, false));
-    conds.push(eq(workflowTemplates.createdBy, opts!.userId!));
+    if (!opts?.isAdmin) {
+      conds.push(eq(workflowTemplates.createdBy, opts!.userId!));
+    }
   } else {
     // tab 是 EmployeeId
     conds.push(eq(workflowTemplates.isPublic, true));
     conds.push(eq(workflowTemplates.ownerEmployeeId, tab));
+    if (!opts?.isAdmin) {
+      conds.push(
+        opts?.userId
+          ? or(eq(workflowTemplates.isBuiltin, true), eq(workflowTemplates.createdBy, opts.userId))!
+          : eq(workflowTemplates.isBuiltin, true),
+      );
+    }
   }
 
   if (tab === "custom") {

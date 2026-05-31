@@ -4,6 +4,7 @@ import { getCurrentUserOrg } from "@/lib/dal/auth";
 import { createClient } from "@/lib/supabase/server";
 import { cleanupStuckMissions } from "@/app/actions/missions";
 import { listWorkflowTemplatesByOrg } from "@/lib/dal/workflow-templates";
+import { isSuperAdmin } from "@/lib/rbac";
 import type { WorkflowTemplateRow } from "@/db/types";
 import { after } from "next/server";
 
@@ -14,6 +15,7 @@ export default async function MissionsPage() {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = user ? await isSuperAdmin(user.id) : false;
 
   const missions = orgId ? await getMissionsWithActiveTasks(orgId, { userId: user?.id, mode: "own" }) : [];
 
@@ -25,7 +27,7 @@ export default async function MissionsPage() {
     try {
       workflows = await listWorkflowTemplatesByOrg(orgId, {
         isEnabled: true,
-      });
+      }, { userId: user?.id, isAdmin });
     } catch (err) {
       console.error("[missions page] Failed to load workflows:", err);
     }

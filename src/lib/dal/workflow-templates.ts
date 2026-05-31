@@ -2,7 +2,6 @@ import { db } from "@/db";
 import { workflowTemplates } from "@/db/schema";
 import { eq, and, desc, asc, sql, or, type SQL } from "drizzle-orm";
 import { getCurrentUserOrg } from "./auth";
-import { buildVisibilityCondition } from "./visibility-filter";
 import { BUILTIN_TEMPLATES } from "@/lib/workflow-templates";
 import type { WorkflowTemplateRow } from "@/db/types";
 
@@ -199,6 +198,8 @@ export interface ListFilter {
 export interface ListOptions {
   limit?: number;
   offset?: number;
+  userId?: string;
+  isAdmin?: boolean;
 }
 
 /**
@@ -243,6 +244,16 @@ export async function listWorkflowTemplatesByOrg(
     // jsonb contains check: default_team @> '["<slug>"]'
     conds.push(
       sql`${workflowTemplates.defaultTeam} @> ${JSON.stringify([filter.employeeSlug])}::jsonb`,
+    );
+  }
+
+  const hasViewerContext =
+    options.userId !== undefined || options.isAdmin !== undefined;
+  if (hasViewerContext && !options.isAdmin) {
+    conds.push(
+      options.userId
+        ? or(eq(workflowTemplates.isBuiltin, true), eq(workflowTemplates.createdBy, options.userId))!
+        : eq(workflowTemplates.isBuiltin, true),
     );
   }
 

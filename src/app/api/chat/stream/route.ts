@@ -4,16 +4,17 @@ import { aiEmployees, organizations, userProfiles, savedConversations } from "@/
 import { and, eq, asc } from "drizzle-orm";
 import { streamText, stepCountIs } from "ai";
 import { getLanguageModel } from "@/lib/agent/model-router";
-import { resolveTools, toVercelTools } from "@/lib/agent/tool-registry";
+import { toVercelTools } from "@/lib/agent/tool-registry";
 import { assembleAgent } from "@/lib/agent/assembly";
 import { getBuiltinSkillSlugToName } from "@/lib/skill-loader";
-import { isLeaderSlug } from "@/lib/agent/mulan-router";
 import { notifyChatMessage } from "@/lib/channels/chat-notifier";
-import { resolveRoute, resolveMultiStepRoute, WORKFLOW_ORDER, type ChatContext, type ContinuationContext } from "@/lib/chat/group-router";
+import { resolveRoute, resolveMultiStepRoute, WORKFLOW_ORDER, type ContinuationContext } from "@/lib/chat/group-router";
 import { executeSerialPlan, executeParallelPlan, planFromTemplate, type StepExecutor } from "@/lib/chat/group-dispatcher";
 import { assembleGroupContext } from "@/lib/agent/assembly";
 import { invokeToolDirectly } from "@/lib/agent/tool-registry";
-import { extractSearchQuery, parseExplicitTimeRange, resolveWebSearchTimeRange } from "@/lib/chat/search-params";
+import { extractSearchQuery, resolveWebSearchTimeRange } from "@/lib/chat/search-params";
+import { buildEmployeeVisibilityCondition } from "@/lib/dal/visibility-filter";
+import { isSuperAdmin } from "@/lib/rbac";
 
 async function resolveOrgId(userId: string | null): Promise<string | null> {
   if (userId) {
@@ -87,9 +88,10 @@ export async function POST(req: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
+    const isAdmin = userId ? await isSuperAdmin(userId) : false;
 
     const body = await req.json();
-    const { employeeSlug, conversationHistory, mode, routingContext, conversationId, resumeFromStep, priorStepOutput, originalTargetSlugs } = body as {
+    const { employeeSlug, conversationHistory, conversationId, resumeFromStep, priorStepOutput, originalTargetSlugs } = body as {
       employeeSlug: string;
       conversationHistory: { role: "user" | "assistant"; content: string }[];
       mode?: "mulan" | "direct" | "routed";
@@ -143,10 +145,20 @@ export async function POST(req: Request) {
 
     // Find employee by slug + org
     const employeeRecord = await db.query.aiEmployees.findFirst({
-      where: and(
-        eq(aiEmployees.slug, employeeSlug),
-        eq(aiEmployees.organizationId, organizationId)
-      ),
+      where: userId
+        ? and(
+            eq(aiEmployees.slug, employeeSlug),
+            buildEmployeeVisibilityCondition({
+              userId,
+              orgId: organizationId,
+              table: aiEmployees,
+              isAdmin,
+            }),
+          )
+        : and(
+            eq(aiEmployees.slug, employeeSlug),
+            eq(aiEmployees.organizationId, organizationId),
+          ),
     });
     if (!employeeRecord) {
       return new Response("数字员工不存在或无权操作", { status: 403 });
@@ -428,6 +440,7 @@ async function handleGroupChat(opts: {
   let targetSlugs: string[];
   let effectiveGroupMode: "serial" | "parallel" = groupMode;
   let continuationUpstreamOutput: string | undefined;
+  let missingWarning: string | undefined;
 
   if (savedTargetSlugs && savedTargetSlugs.length > 0 && (resumeStep > 0 || hasPriorOutput)) {
     targetSlugs = [...savedTargetSlugs];
@@ -445,7 +458,7 @@ async function handleGroupChat(opts: {
 
       if (multiStep.missing.length > 0 && available.length >= 2) {
         const missingNames = multiStep.missing.map((m) => m.task).join("、");
-        (opts as any)._missingWarning = `⚠️ 当前群聊缺少以下角色：${missingNames}。对应任务将由其他成员代为处理。`;
+        missingWarning = `⚠️ 当前群聊缺少以下角色：${missingNames}。对应任务将由其他成员代为处理。`;
       }
     } else {
       const continuationContext = buildContinuationContext(conversationHistory, aiParticipants);
@@ -500,7 +513,7 @@ async function handleGroupChat(opts: {
   const stepExecutor: StepExecutor = async function* (step) {
     const agent = agentMap.get(step.employeeSlug);
     if (!agent) {
-      yield { textDelta: `[${step.employeeSlug} 不可用]`, done: true, output: "" } as any;
+      yield { textDelta: `[${step.employeeSlug} 不可用]`, done: true, output: "" };
       return;
     }
 
@@ -526,7 +539,6 @@ async function handleGroupChat(opts: {
     let preExecBlock = "";
     if (hasRetrievalIntent && !upstreamOutput) {
       const searchQuery = extractSearchQuery(lastUserMessage);
-      const explicitTimeRange = parseExplicitTimeRange(lastUserMessage);
       const resolvedTimeRange = resolveWebSearchTimeRange(lastUserMessage);
       const params: Record<string, unknown> = {
         query: searchQuery,
@@ -537,7 +549,7 @@ async function handleGroupChat(opts: {
         params.timeRange = resolvedTimeRange;
       }
 
-      yield { thinking: { tool: "web_search", label: "正在搜索互联网资料" }, done: false, output: "" } as any;
+      yield { thinking: { tool: "web_search", label: "正在搜索互联网资料" }, done: false, output: "" };
 
       const invocation = await invokeToolDirectly("web_search", params, {
         organizationId,
@@ -578,14 +590,14 @@ async function handleGroupChat(opts: {
 
           if (resultsList.length === 0) {
             const emptyText = `【${roleInfo?.name ?? step.employeeSlug} · 实时检索报告】\n\n**检索参数**：query="${searchQuery}"，timeRange=${resolvedTimeRange ?? "unset"}\n**生成时间**：${todayIso}\n**命中条数**：0 条\n\n## 未检索到符合条件的真实报道\n\n不伪造结果。请调整关键词或时间范围后重试。\n\n---\n*本步骤由 server 端直接执行，未经 LLM 改写。*`;
-            yield { textDelta: emptyText, done: false, output: "" } as any;
-            yield { done: true, output: emptyText } as any;
+            yield { textDelta: emptyText, done: false, output: "" };
+            yield { done: true, output: emptyText };
             return;
           }
 
           const shortCircuitText = `【${roleInfo?.name ?? step.employeeSlug} · 实时检索报告】\n\n**检索参数**：query="${searchQuery}"，timeRange=${resolvedTimeRange ?? "unset"}\n**生成时间**：${todayIso}\n**命中条数**：${result.coverage?.returnedCount ?? resultsList.length} 条（来源 ${result.coverage?.sourceCount ?? 0} 个）\n\n${result.summary ? `**检索摘要**：${result.summary}\n\n` : ""}## 最新报道（按相关度排序）\n\n${formatted}\n\n---\n*本步骤由 server 端直接从 Tavily 实时返回，未经 LLM 改写，保证来源、标题、日期、URL 100% 原样。*`;
-          yield { textDelta: shortCircuitText, done: false, output: "" } as any;
-          yield { done: true, output: shortCircuitText } as any;
+          yield { textDelta: shortCircuitText, done: false, output: "" };
+          yield { done: true, output: shortCircuitText };
           return;
         }
       }
@@ -599,9 +611,8 @@ async function handleGroupChat(opts: {
         `原始需求：${step.prompt}`,
         ``,
       ];
-      const warning = (opts as any)._missingWarning as string | undefined;
-      if (warning) {
-        parts.push(warning);
+      if (missingWarning) {
+        parts.push(missingWarning);
         parts.push(``);
       }
       parts.push(`请只完成你负责的"${intentStep?.taskDescription ?? roleInfo.task}"部分，不要做其他人的工作。直接开始执行并输出结果，不要先描述执行计划。`);
@@ -648,15 +659,15 @@ async function handleGroupChat(opts: {
     for await (const part of result.fullStream) {
       if (part.type === "text-delta") {
         output += part.text;
-        yield { textDelta: part.text, done: false, output: "" } as any;
+        yield { textDelta: part.text, done: false, output: "" };
       }
       if (part.type === "tool-call") {
         const label = TOOL_LABELS[part.toolName] ?? `正在执行${part.toolName}`;
-        yield { thinking: { tool: part.toolName, label }, done: false, output: "" } as any;
+        yield { thinking: { tool: part.toolName, label }, done: false, output: "" };
       }
     }
 
-    yield { done: true, output } as any;
+    yield { done: true, output };
   };
 
   const plan = planFromTemplate({
@@ -674,7 +685,7 @@ async function handleGroupChat(opts: {
       participantType: "ai_employee" as const,
       role: "member" as const,
     })),
-  } as any);
+  });
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -685,8 +696,6 @@ async function handleGroupChat(opts: {
           );
         } catch { /* intentional: stream already closed */ }
       };
-
-      const missingWarning = (opts as any)._missingWarning as string | undefined;
 
       try {
         const gen = effectiveGroupMode === "parallel"

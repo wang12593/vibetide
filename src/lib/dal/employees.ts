@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { aiEmployees, employeeSkills, skills, employeeKnowledgeBases, knowledgeBases } from "@/db/schema";
-import { eq, and, inArray, or } from "drizzle-orm";
+import { aiEmployees, employeeSkills, skills, employeeKnowledgeBases } from "@/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUserOrg } from "./auth";
 import { buildEmployeeVisibilityCondition } from "./visibility-filter";
 import type { AIEmployee, SkillCategory, EmployeeFullProfile, AuthorityLevel, WorkPreferences, KnowledgeBaseInfo, LearnedPatterns } from "@/lib/types";
@@ -99,13 +99,24 @@ export async function getEmployees(opts?: { userId?: string; isAdmin?: boolean }
 }
 
 export async function getEmployee(
-  slug: string
+  slug: string,
+  opts?: { userId?: string; isAdmin?: boolean },
 ): Promise<AIEmployee | undefined> {
   const orgId = await getCurrentUserOrg();
   const emp = await db.query.aiEmployees.findFirst({
-    where: orgId
-      ? and(eq(aiEmployees.slug, slug), eq(aiEmployees.organizationId, orgId))
-      : eq(aiEmployees.slug, slug),
+    where: orgId && opts?.userId
+      ? and(
+          eq(aiEmployees.slug, slug),
+          buildEmployeeVisibilityCondition({
+            userId: opts.userId,
+            orgId,
+            table: aiEmployees,
+            isAdmin: opts.isAdmin ?? false,
+          }),
+        )
+      : orgId
+        ? and(eq(aiEmployees.slug, slug), eq(aiEmployees.organizationId, orgId))
+        : eq(aiEmployees.slug, slug),
   });
 
   if (!emp) return undefined;
@@ -154,13 +165,24 @@ export async function getEmployee(
 }
 
 export async function getEmployeeFullProfile(
-  slug: string
+  slug: string,
+  opts?: { userId?: string; isAdmin?: boolean },
 ): Promise<EmployeeFullProfile | undefined> {
   const orgId = await getCurrentUserOrg();
   const emp = await db.query.aiEmployees.findFirst({
-    where: orgId
-      ? and(eq(aiEmployees.slug, slug), eq(aiEmployees.organizationId, orgId))
-      : eq(aiEmployees.slug, slug),
+    where: orgId && opts?.userId
+      ? and(
+          eq(aiEmployees.slug, slug),
+          buildEmployeeVisibilityCondition({
+            userId: opts.userId,
+            orgId,
+            table: aiEmployees,
+            isAdmin: opts.isAdmin ?? false,
+          }),
+        )
+      : orgId
+        ? and(eq(aiEmployees.slug, slug), eq(aiEmployees.organizationId, orgId))
+        : eq(aiEmployees.slug, slug),
   });
 
   if (!emp) return undefined;

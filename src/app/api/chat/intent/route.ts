@@ -16,7 +16,6 @@ import {
   type IntentMemoryEntry,
   type ScenarioInfo,
 } from "@/lib/agent/intent-recognition";
-import { isLeaderSlug } from "@/lib/agent/mulan-router";
 import { buildEmployeeVisibilityCondition } from "@/lib/dal/visibility-filter";
 import { isSuperAdmin } from "@/lib/rbac";
 
@@ -126,8 +125,7 @@ export async function POST(req: Request) {
             admin
               ? sql`true`
               : or(
-                  eq(workflowTemplates.isBuiltin, true),
-                  eq(workflowTemplates.isPublic, true),
+                  and(eq(workflowTemplates.isBuiltin, true), eq(workflowTemplates.isPublic, true)),
                   userId ? eq(workflowTemplates.createdBy, userId) : sql`false`,
                 ),
           ),
@@ -166,8 +164,6 @@ export async function POST(req: Request) {
         userEdited: log.userEdited,
       };
     });
-
-    const isLeader = isLeaderSlug(employeeSlug || "leader");
 
     const intentResult = await recognizeIntent(
       message,

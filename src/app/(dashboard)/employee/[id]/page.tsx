@@ -27,11 +27,6 @@ export default async function EmployeeProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const employee = await withTimeout(getEmployeeFullProfile(id), undefined);
-
-  if (!employee) {
-    notFound();
-  }
 
   let orgId = "";
   let userId: string | undefined;
@@ -55,6 +50,15 @@ export default async function EmployeeProfilePage({
     }
   } catch {
     // fallback
+  }
+
+  const employee = await withTimeout(
+    getEmployeeFullProfile(id, { userId, isAdmin: canManage }),
+    undefined,
+  );
+
+  if (!employee) {
+    notFound();
   }
 
   const [
@@ -89,7 +93,7 @@ export default async function EmployeeProfilePage({
       // 过滤（之前用 defaultTeam 包含匹配，会把"协作成员"身份的场景也算进来，
       // 导致质量审核官显示"深度报道""系列策划"等无关场景）。
       orgId
-        ? listTemplatesForHomepageByTab(orgId, employee.id as EmployeeId).catch(() => [])
+        ? listTemplatesForHomepageByTab(orgId, employee.id as EmployeeId, { userId, isAdmin: canManage }).catch(() => [])
         : Promise.resolve([]),
     ]);
 

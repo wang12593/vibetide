@@ -75,7 +75,6 @@ const CONTINUATION_KEYWORDS = [
 
 const DEFAULT_RECEPTIONIST = "xiaoce";
 
-const FOCUS_DECAY_MESSAGES = 5;
 const FOCUS_DECAY_MS = 30_000;
 
 const NICKNAME_MAP: Record<string, EmployeeSlug> = {
@@ -87,7 +86,7 @@ const NICKNAME_MAP: Record<string, EmployeeSlug> = {
   小神: "xiaoshen",
   小发: "xiaofa",
   小书: "xiaoshu",
-  穆兰: "mulan",
+  穆兰: "leader",
 };
 
 export function createChatContext(): ChatContext {
