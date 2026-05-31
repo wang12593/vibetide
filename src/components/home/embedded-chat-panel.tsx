@@ -740,12 +740,22 @@ export function EmbeddedChatPanel({
                             taskDescription: s.taskDescription,
                             skills: s.skills,
                           }))}
-                          onConfirm={async ({ confirmedSteps }) => {
-                            const slugs = confirmedSteps.map((s) => s.employeeSlug);
-                            const userMsg = pi.originalMessage || lockedUserMessageRef.current || chat.pendingMessage || pi.summary || "协作任务";
-                            const { id } = await createGroupChat({
-                              title: userMsg,
-                              employeeSlugs: slugs,
+	                          onConfirm={async ({ confirmedSteps }) => {
+	                            const slugs = confirmedSteps.map((s) => s.employeeSlug);
+	                            const userMsg = pi.originalMessage || lockedUserMessageRef.current || chat.pendingMessage || pi.summary || "协作任务";
+	                            if (pi.routeTarget?.kind === "mission") {
+	                              chat.executeIntent(userMsg, {
+	                                ...pi,
+	                                steps: confirmedSteps.map((s) => ({
+	                                  ...s,
+	                                  employeeSlug: s.employeeSlug as EmployeeId,
+	                                })),
+	                              }, false);
+	                              return;
+	                            }
+	                            const { id } = await createGroupChat({
+	                              title: userMsg,
+	                              employeeSlugs: slugs,
                               mode: "serial",
                               leaderEmployeeSlug: "leader",
                               intentSteps: confirmedSteps.map((s) => ({

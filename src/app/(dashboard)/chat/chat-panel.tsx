@@ -1124,12 +1124,22 @@ export function ChatPanel({
                               employeeName: s.employeeName,
                               taskDescription: s.taskDescription,
                               skills: s.skills,
-                            }))}
-                            onConfirm={async ({ confirmedSteps }) => {
-                              const slugs = confirmedSteps.map((s) => s.employeeSlug);
-                              const { id } = await createGroupChat({
-                                title: pendingIntent.summary || "协作任务",
-                                employeeSlugs: slugs,
+	                            }))}
+	                            onConfirm={async ({ confirmedSteps }) => {
+	                              const slugs = confirmedSteps.map((s) => s.employeeSlug);
+	                              if (pendingIntent.routeTarget?.kind === "mission") {
+	                                onIntentConfirm?.({
+	                                  ...pendingIntent,
+	                                  steps: confirmedSteps.map((s) => ({
+	                                    ...s,
+	                                    employeeSlug: s.employeeSlug as EmployeeId,
+	                                  })),
+	                                });
+	                                return;
+	                              }
+	                              const { id } = await createGroupChat({
+	                                title: pendingIntent.summary || "协作任务",
+	                                employeeSlugs: slugs,
                                 mode: "serial",
                                 leaderEmployeeSlug: "leader",
                               });
