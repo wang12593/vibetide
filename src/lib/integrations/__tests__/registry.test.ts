@@ -4,7 +4,11 @@ import {
   executeIntegrationTool,
   listIntegrationTools,
 } from "../registry";
-import type { IntegrationAdapter, AdapterExecutionContext } from "../types";
+import type {
+  AdapterExecutionContext,
+  AdapterToolResult,
+  IntegrationAdapter,
+} from "../types";
 
 const context: AdapterExecutionContext = {
   organizationId: "00000000-0000-0000-0000-000000000001",
@@ -84,6 +88,38 @@ const mcpApiKeyContext: AdapterExecutionContext = {
   source: "mcp",
 };
 
+const auditAdapter: IntegrationAdapter = {
+  manifest: {
+    id: "audit-demo",
+    displayName: "Audit Demo",
+    version: "1.0.0",
+    authMode: "none",
+    tools: [
+      {
+        name: "audit.echo",
+        title: "Audit Echo",
+        description: "Echo input text with audit metadata",
+        permissions: ["demo:read"],
+        destructive: false,
+        audit: true,
+      },
+    ],
+  },
+  tools: [
+    {
+      name: "audit.echo",
+      title: "Audit Echo",
+      description: "Echo input text with audit metadata",
+      inputSchema: z.object({ text: z.string() }),
+    },
+  ],
+  execute: async (_toolName, input): Promise<AdapterToolResult> => ({
+    ok: true,
+    data: input,
+    audit: { externalRequestId: "ext_1" },
+  }),
+};
+
 describe("integration registry", () => {
   beforeEach(() => {
     executeMock.mockClear();
@@ -124,6 +160,19 @@ describe("integration registry", () => {
     expect(result.ok).toBe(true);
     expect(result.requestId).toBe("req_1");
     expect(executeMock).toHaveBeenCalledOnce();
+  });
+
+  it("preserves audit metadata returned by adapters", async () => {
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.audit).toEqual({ externalRequestId: "ext_1" });
+    expect(result.requestId).toBe("req_1");
   });
 
   it("rejects unknown tools", async () => {

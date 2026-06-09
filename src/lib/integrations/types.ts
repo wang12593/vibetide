@@ -55,6 +55,7 @@ export interface AdapterToolResult<TData = unknown> {
   ok: boolean;
   data?: TData;
   error?: AdapterToolError;
+  audit?: Record<string, unknown>;
   requestId?: string;
 }
 
