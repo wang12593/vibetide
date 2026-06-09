@@ -1,4 +1,5 @@
 import { publishArticleToCms, syncCmsCatalogs } from "@/lib/cms";
+import { getArticleById } from "@/lib/dal/articles";
 import {
   type CmsPublicationState,
   getPublicationById,
@@ -77,6 +78,28 @@ export async function executeCmsTool(
   switch (toolName) {
     case "cms.publish_article": {
       const typed = input as CmsPublishArticleInput;
+      const article = await getArticleById(typed.articleId);
+
+      if (!article) {
+        return adapterFailure(
+          "article_not_found",
+          `Article not found: ${typed.articleId}`,
+          { articleId: typed.articleId },
+          "read",
+          false,
+        );
+      }
+
+      if (article.organizationId !== context.organizationId) {
+        return adapterFailure(
+          "permission_denied",
+          "Article belongs to another organization",
+          { articleId: typed.articleId },
+          "auth",
+          false,
+        );
+      }
+
       const triggerSource = typed.triggerSource ?? "workflow";
       const data = await publishArticleToCms({
         articleId: typed.articleId,
