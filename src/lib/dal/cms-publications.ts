@@ -154,3 +154,19 @@ export async function listByState(
     limit: options.limit ?? 100,
   });
 }
+
+export async function listRecentPublicationsByOrg(
+  organizationId: string,
+  options: { state?: CmsPublicationState; limit?: number } = {},
+) {
+  const conditions = [eq(cmsPublications.organizationId, organizationId)];
+  if (options.state) {
+    conditions.push(eq(cmsPublications.cmsState, options.state));
+  }
+
+  return await db.query.cmsPublications.findMany({
+    where: and(...conditions),
+    orderBy: [desc(cmsPublications.createdAt)],
+    limit: Math.min(Math.max(options.limit ?? 20, 1), 50),
+  });
+}
