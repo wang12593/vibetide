@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   executeIntegrationTool,
@@ -14,6 +14,11 @@ const context: AdapterExecutionContext = {
   source: "agent",
   permissions: ["demo:read"],
 };
+
+const executeMock = vi.fn(async (_toolName, input) => ({
+  ok: true,
+  data: input,
+}));
 
 const demoAdapter: IntegrationAdapter = {
   manifest: {
@@ -41,13 +46,14 @@ const demoAdapter: IntegrationAdapter = {
       outputSchema: z.object({ text: z.string() }),
     },
   ],
-  execute: async (_toolName, input) => ({
-    ok: true,
-    data: input,
-  }),
+  execute: executeMock,
 };
 
 describe("integration registry", () => {
+  beforeEach(() => {
+    executeMock.mockClear();
+  });
+
   it("lists tools from adapters", () => {
     const tools = listIntegrationTools([demoAdapter]);
     expect(tools).toHaveLength(1);
@@ -64,6 +70,8 @@ describe("integration registry", () => {
     );
     expect(result.ok).toBe(true);
     expect(result.data).toEqual({ text: "hello" });
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).toHaveBeenCalledOnce();
   });
 
   it("rejects unknown tools", async () => {
@@ -75,6 +83,10 @@ describe("integration registry", () => {
     );
     expect(result.ok).toBe(false);
     expect(result.error?.code).toBe("tool_not_found");
+    expect(result.error?.stage).toBe("registry");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).not.toHaveBeenCalled();
   });
 
   it("rejects missing permissions", async () => {
@@ -86,6 +98,10 @@ describe("integration registry", () => {
     );
     expect(result.ok).toBe(false);
     expect(result.error?.code).toBe("permission_denied");
+    expect(result.error?.stage).toBe("auth");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).not.toHaveBeenCalled();
   });
 
   it("returns schema validation errors before execution", async () => {
@@ -97,5 +113,59 @@ describe("integration registry", () => {
     );
     expect(result.ok).toBe(false);
     expect(result.error?.code).toBe("invalid_input");
+    expect(result.error?.stage).toBe("validation");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it("returns adapter exceptions as execution errors", async () => {
+    executeMock.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await executeIntegrationTool(
+      [demoAdapter],
+      "demo.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("adapter_exception");
+    expect(result.error?.stage).toBe("execution");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).toHaveBeenCalledOnce();
+  });
+
+  it("throws when a listed manifest tool has no definition", () => {
+    const misconfiguredAdapter: IntegrationAdapter = {
+      ...demoAdapter,
+      tools: [],
+    };
+
+    expect(() => listIntegrationTools([misconfiguredAdapter])).toThrow(
+      /tool definition missing/i,
+    );
+  });
+
+  it("returns misconfiguration when executing a manifest tool with no definition", async () => {
+    const misconfiguredAdapter: IntegrationAdapter = {
+      ...demoAdapter,
+      tools: [],
+    };
+
+    const result = await executeIntegrationTool(
+      [misconfiguredAdapter],
+      "demo.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("tool_definition_missing");
+    expect(result.error?.stage).toBe("registry");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).not.toHaveBeenCalled();
   });
 });

@@ -46,6 +46,8 @@ export interface AdapterToolDefinition<
 export interface AdapterToolError {
   code: string;
   message: string;
+  stage?: string;
+  retriable?: boolean;
   details?: unknown;
 }
 

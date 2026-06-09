@@ -1,34 +1,49 @@
 import { adapterFailure, permissionDenied } from "./errors";
 import type {
   AdapterExecutionContext,
+  AdapterToolManifest,
   AdapterToolResult,
   IntegrationAdapter,
   RegisteredIntegrationTool,
 } from "./types";
 
+type IntegrationToolResolution =
+  | {
+      ok: true;
+      adapter: IntegrationAdapter;
+      tool: RegisteredIntegrationTool;
+    }
+  | {
+      ok: false;
+      code: "tool_not_found" | "tool_definition_missing";
+      message: string;
+      adapter?: IntegrationAdapter;
+      manifest?: AdapterToolManifest;
+    };
+
 export function listIntegrationTools(
   adapters: IntegrationAdapter[],
 ): RegisteredIntegrationTool[] {
   return adapters.flatMap((adapter) =>
-    adapter.manifest.tools.flatMap((manifest) => {
+    adapter.manifest.tools.map((manifest) => {
       const definition = adapter.tools.find((tool) => tool.name === manifest.name);
       if (!definition) {
-        return [];
+        throw new Error(
+          `Integration adapter "${adapter.manifest.id}" tool definition missing for manifest tool "${manifest.name}"`,
+        );
       }
 
-      return [
-        {
-          adapterId: adapter.manifest.id,
-          name: manifest.name,
-          title: manifest.title,
-          description: manifest.description,
-          permissions: manifest.permissions,
-          destructive: manifest.destructive,
-          audit: manifest.audit,
-          manifest,
-          definition,
-        },
-      ];
+      return {
+        adapterId: adapter.manifest.id,
+        name: manifest.name,
+        title: manifest.title,
+        description: manifest.description,
+        permissions: manifest.permissions,
+        destructive: manifest.destructive,
+        audit: manifest.audit,
+        manifest,
+        definition,
+      };
     }),
   );
 }
@@ -36,12 +51,7 @@ export function listIntegrationTools(
 export function resolveIntegrationTool(
   adapters: IntegrationAdapter[],
   toolName: string,
-):
-  | {
-      adapter: IntegrationAdapter;
-      tool: RegisteredIntegrationTool;
-    }
-  | null {
+): IntegrationToolResolution {
   for (const adapter of adapters) {
     const manifest = adapter.manifest.tools.find((tool) => tool.name === toolName);
     if (!manifest) {
@@ -50,10 +60,17 @@ export function resolveIntegrationTool(
 
     const definition = adapter.tools.find((tool) => tool.name === toolName);
     if (!definition) {
-      return null;
+      return {
+        ok: false,
+        code: "tool_definition_missing",
+        message: `Integration adapter "${adapter.manifest.id}" tool definition missing for manifest tool "${toolName}"`,
+        adapter,
+        manifest,
+      };
     }
 
     return {
+      ok: true,
       adapter,
       tool: {
         adapterId: adapter.manifest.id,
@@ -69,7 +86,11 @@ export function resolveIntegrationTool(
     };
   }
 
-  return null;
+  return {
+    ok: false,
+    code: "tool_not_found",
+    message: `Integration tool not found: ${toolName}`,
+  };
 }
 
 export async function executeIntegrationTool(
@@ -79,9 +100,18 @@ export async function executeIntegrationTool(
   context: AdapterExecutionContext,
 ): Promise<AdapterToolResult> {
   const resolved = resolveIntegrationTool(adapters, toolName);
-  if (!resolved) {
+  if (!resolved.ok) {
     return withRequestId(
-      adapterFailure("tool_not_found", `Integration tool not found: ${toolName}`),
+      adapterFailure(
+        resolved.code,
+        resolved.message,
+        {
+          adapterId: resolved.adapter?.manifest.id,
+          toolName,
+        },
+        "registry",
+        false,
+      ),
       context,
     );
   }
@@ -98,7 +128,7 @@ export async function executeIntegrationTool(
     return withRequestId(
       adapterFailure("invalid_input", "Integration tool input is invalid", {
         issues: parsedInput.error.issues,
-      }),
+      }, "validation", false),
       context,
     );
   }
@@ -114,7 +144,7 @@ export async function executeIntegrationTool(
     return withRequestId(
       adapterFailure("adapter_exception", "Integration adapter execution failed", {
         message: error instanceof Error ? error.message : String(error),
-      }),
+      }, "execution", false),
       context,
     );
   }
