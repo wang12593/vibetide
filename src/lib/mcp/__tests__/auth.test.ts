@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { authenticateMcpRequest, parseMcpApiKeys } from "../auth";
+import {
+  authenticateMcpRequest,
+  parseMcpApiKeys,
+  safeEqualSecret,
+} from "../auth";
 
 const OLD_ENV = { ...process.env };
 
@@ -42,6 +46,20 @@ describe("parseMcpApiKeys", () => {
   it("throws on invalid key config shape", () => {
     process.env.MCP_API_KEYS = JSON.stringify([{ key: "x" }]);
     expect(() => parseMcpApiKeys()).toThrow(/MCP_API_KEYS/);
+  });
+});
+
+describe("safeEqualSecret", () => {
+  it("returns true for matching secrets", () => {
+    expect(safeEqualSecret("vt_mcp_1", "vt_mcp_1")).toBe(true);
+  });
+
+  it("returns false for different same-length secrets", () => {
+    expect(safeEqualSecret("vt_mcp_1", "vt_mcp_2")).toBe(false);
+  });
+
+  it("returns false for length mismatch", () => {
+    expect(safeEqualSecret("vt_mcp_1", "vt_mcp_1_extra")).toBe(false);
   });
 });
 

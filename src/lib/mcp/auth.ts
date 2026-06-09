@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 import type { AdapterExecutionContext } from "../integrations/types";
@@ -67,9 +67,9 @@ export function authenticateMcpRequest(headers: Headers): McpAuthResult {
     return unauthorized();
   }
 
-  const matchedKey = parseMcpApiKeys().find((configuredKey) => {
-    return configuredKey.key === apiKey;
-  });
+  const matchedKey = parseMcpApiKeys().find((configuredKey) =>
+    safeEqualSecret(configuredKey.key, apiKey),
+  );
 
   if (!matchedKey) {
     return unauthorized();
@@ -98,6 +98,17 @@ function extractApiKey(headers: Headers): string | null {
   }
 
   return headers.get("x-api-key")?.trim() || null;
+}
+
+export function safeEqualSecret(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  if (aBuffer.length !== bBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(aBuffer, bBuffer);
 }
 
 function unauthorized(): McpAuthResult {
