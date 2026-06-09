@@ -38,6 +38,11 @@ describe("parseMcpApiKeys", () => {
     process.env.MCP_API_KEYS = "{bad";
     expect(() => parseMcpApiKeys()).toThrow(/MCP_API_KEYS/);
   });
+
+  it("throws on invalid key config shape", () => {
+    process.env.MCP_API_KEYS = JSON.stringify([{ key: "x" }]);
+    expect(() => parseMcpApiKeys()).toThrow(/MCP_API_KEYS/);
+  });
 });
 
 describe("authenticateMcpRequest", () => {
@@ -49,6 +54,7 @@ describe("authenticateMcpRequest", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected auth failure");
     expect(result.error.code).toBe("mcp_disabled");
+    expect(result.error.status).toBe(403);
   });
 
   it("rejects missing API key", () => {
@@ -58,6 +64,27 @@ describe("authenticateMcpRequest", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected auth failure");
     expect(result.error.code).toBe("unauthorized");
+    expect(result.error.status).toBe(401);
+  });
+
+  it("rejects invalid API key", () => {
+    process.env.MCP_SERVER_ENABLED = "true";
+    process.env.MCP_API_KEYS = JSON.stringify([
+      {
+        key: "vt_mcp_1",
+        name: "host",
+        organizationId: "org_1",
+        actorId: "actor_1",
+        permissions: ["cms:read"],
+      },
+    ]);
+    const result = authenticateMcpRequest(
+      headers({ authorization: "Bearer wrong_key" }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected auth failure");
+    expect(result.error.code).toBe("unauthorized");
+    expect(result.error.status).toBe(401);
   });
 
   it("accepts bearer API key", () => {
@@ -77,8 +104,13 @@ describe("authenticateMcpRequest", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected auth success");
     expect(result.context.organizationId).toBe("org_1");
+    expect(result.context.actorId).toBe("actor_1");
     expect(result.context.actorType).toBe("api_key");
+    expect(result.context.source).toBe("mcp");
+    expect(result.context.requestId).toEqual(expect.any(String));
+    expect(result.context.requestId).not.toBe("");
     expect(result.context.permissions).toEqual(["cms:read"]);
+    expect(result.context.keyName).toBe("host");
   });
 
   it("accepts x-api-key", () => {
@@ -94,5 +126,8 @@ describe("authenticateMcpRequest", () => {
     ]);
     const result = authenticateMcpRequest(headers({ "x-api-key": "vt_mcp_2" }));
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected auth success");
+    expect(result.context.organizationId).toBe("org_2");
+    expect(result.context.permissions).toEqual(["cms:sync"]);
   });
 });
