@@ -1,14 +1,17 @@
 import { z } from "zod";
+import type { CmsPublicationState } from "@/lib/dal/cms-publications";
 import type { AdapterToolDefinition } from "@/lib/integrations/types";
 
-export const cmsPublicationStateSchema = z.enum([
+export const cmsPublicationStateValues = [
   "submitting",
   "submitted",
   "synced",
   "rejected_by_cms",
   "failed",
   "retrying",
-]);
+] as const satisfies readonly CmsPublicationState[];
+
+export const cmsPublicationStateSchema = z.enum(cmsPublicationStateValues);
 
 export const cmsPublishArticleInputSchema = z.object({
   articleId: z.string().min(1),
@@ -32,7 +35,7 @@ export const cmsListRecentPublicationsInputSchema = z.object({
   limit: z.number().int().min(1).max(50).optional(),
 });
 
-export type CmsPublicationStateInput = z.infer<typeof cmsPublicationStateSchema>;
+export type CmsPublicationStateInput = CmsPublicationState;
 export type CmsPublishArticleInput = z.infer<
   typeof cmsPublishArticleInputSchema
 >;

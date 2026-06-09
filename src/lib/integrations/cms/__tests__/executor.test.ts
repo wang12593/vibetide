@@ -129,13 +129,15 @@ describe("cmsAdapter", () => {
 
     expect(result.ok).toBe(true);
     expect(syncCmsCatalogs).toHaveBeenCalledWith("org_1", {
-      triggerSource: "mcp",
+      triggerSource: "manual",
       operatorId: "agent-xiaofa",
       dryRun: true,
       deleteMissing: false,
     });
     expect(result.audit).toMatchObject({
       syncLogId: "sync_1",
+      requestedSource: "mcp",
+      triggerSource: "manual",
       dryRun: true,
       deleteMissing: false,
     });
@@ -234,6 +236,30 @@ describe("cmsAdapter", () => {
     expect(result.error?.code).toBe("publication_not_found");
   });
 
+  it("truncates and sanitizes long publication status error messages", async () => {
+    const { getPublicationById } = await import("@/lib/dal/cms-publications");
+    vi.mocked(getPublicationById).mockResolvedValueOnce({
+      ...publicationRow,
+      cmsState: "failed",
+      errorCode: "cms_business_error",
+      errorMessage: `first line\nsecond line\t${"x".repeat(400)}`,
+    });
+
+    const result = await cmsAdapter.execute(
+      "cms.get_publication_status",
+      { publicationId: "pub_1" },
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    const data = result.data as { errorCode?: string; errorMessage?: string };
+    expect(data.errorCode).toBe("cms_business_error");
+    expect(data.errorMessage).toHaveLength(300);
+    expect(data.errorMessage).toMatch(/^first line second line x+/);
+    expect(data.errorMessage).toMatch(/\.\.\.$/);
+    expect(data.errorMessage).not.toMatch(/[\u0000-\u001F\u007F]/);
+  });
+
   it("lists recent publications through the organization-scoped DAL helper", async () => {
     const { listRecentPublicationsByOrg } = await import(
       "@/lib/dal/cms-publications"
@@ -268,6 +294,40 @@ describe("cmsAdapter", () => {
         },
       ],
     });
+  });
+
+  it("truncates and sanitizes long publication list error messages", async () => {
+    const { listRecentPublicationsByOrg } = await import(
+      "@/lib/dal/cms-publications"
+    );
+    vi.mocked(listRecentPublicationsByOrg).mockResolvedValueOnce([
+      {
+        ...publicationRow,
+        cmsState: "failed",
+        errorCode: "cms_business_error",
+        errorMessage: `first line\r\nsecond line\u0007${"x".repeat(400)}`,
+      },
+    ]);
+
+    const result = await cmsAdapter.execute(
+      "cms.list_recent_publications",
+      { limit: 1 },
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    const data = result.data as {
+      publications?: Array<{ errorCode?: string; errorMessage?: string }>;
+    };
+    expect(data.publications?.[0]?.errorCode).toBe("cms_business_error");
+    expect(data.publications?.[0]?.errorMessage).toHaveLength(300);
+    expect(data.publications?.[0]?.errorMessage).toMatch(
+      /^first line second line x+/,
+    );
+    expect(data.publications?.[0]?.errorMessage).toMatch(/\.\.\.$/);
+    expect(data.publications?.[0]?.errorMessage).not.toMatch(
+      /[\u0000-\u001F\u007F]/,
+    );
   });
 
   it("returns tool_not_found for unknown CMS tools", async () => {

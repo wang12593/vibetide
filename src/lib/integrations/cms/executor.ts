@@ -1,5 +1,6 @@
 import { publishArticleToCms, syncCmsCatalogs } from "@/lib/cms";
 import {
+  type CmsPublicationState,
   getPublicationById,
   listRecentPublicationsByOrg,
 } from "@/lib/dal/cms-publications";
@@ -22,7 +23,7 @@ type PublicationSummaryRow = {
   cmsArticleId?: string | null;
   cmsCatalogId?: string | null;
   cmsSiteId?: number | null;
-  cmsState: string;
+  cmsState: CmsPublicationState;
   attempts?: number | null;
   previewUrl?: string | null;
   publishedUrl?: string | null;
@@ -35,6 +36,13 @@ type PublicationSummaryRow = {
 function serializeDate(value: Date | string | null | undefined) {
   if (!value) return undefined;
   return value instanceof Date ? value.toISOString() : value;
+}
+
+function summarizeErrorMessage(value: string | null | undefined) {
+  if (!value) return undefined;
+
+  const sanitized = value.replace(/[\u0000-\u001F\u007F]+/g, " ");
+  return sanitized.length > 300 ? `${sanitized.slice(0, 297)}...` : sanitized;
 }
 
 function includeDefined<T extends Record<string, unknown>>(value: T) {
@@ -55,7 +63,7 @@ function summarizePublication(row: PublicationSummaryRow) {
     previewUrl: row.previewUrl ?? undefined,
     publishedUrl: row.publishedUrl ?? undefined,
     errorCode: row.errorCode ?? undefined,
-    errorMessage: row.errorMessage ?? undefined,
+    errorMessage: summarizeErrorMessage(row.errorMessage),
     createdAt: serializeDate(row.createdAt),
     updatedAt: serializeDate(row.updatedAt),
   });
@@ -110,7 +118,7 @@ export async function executeCmsTool(
       }
 
       const data = await syncCmsCatalogs(context.organizationId, {
-        triggerSource: "mcp" as never,
+        triggerSource: "manual",
         operatorId: context.actorId,
         dryRun,
         deleteMissing,
@@ -121,6 +129,8 @@ export async function executeCmsTool(
         data,
         audit: {
           syncLogId: data.syncLogId,
+          requestedSource: "mcp",
+          triggerSource: "manual",
           dryRun,
           deleteMissing,
         },
