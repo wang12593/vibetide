@@ -168,4 +168,54 @@ describe("integration registry", () => {
     expect(result.requestId).toBe("req_1");
     expect(executeMock).not.toHaveBeenCalled();
   });
+
+  it("throws when a tool definition has no manifest metadata", () => {
+    const misconfiguredAdapter: IntegrationAdapter = {
+      ...demoAdapter,
+      tools: [
+        ...demoAdapter.tools,
+        {
+          name: "demo.extra",
+          title: "Extra",
+          description: "Extra tool",
+          inputSchema: z.object({ text: z.string() }),
+          outputSchema: z.object({ text: z.string() }),
+        },
+      ],
+    };
+
+    expect(() => listIntegrationTools([misconfiguredAdapter])).toThrow(
+      /tool manifest missing/i,
+    );
+  });
+
+  it("returns misconfiguration when executing a definition with no manifest metadata", async () => {
+    const misconfiguredAdapter: IntegrationAdapter = {
+      ...demoAdapter,
+      tools: [
+        ...demoAdapter.tools,
+        {
+          name: "demo.extra",
+          title: "Extra",
+          description: "Extra tool",
+          inputSchema: z.object({ text: z.string() }),
+          outputSchema: z.object({ text: z.string() }),
+        },
+      ],
+    };
+
+    const result = await executeIntegrationTool(
+      [misconfiguredAdapter],
+      "demo.extra",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("tool_manifest_missing");
+    expect(result.error?.stage).toBe("registry");
+    expect(result.error?.retriable).toBe(false);
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).not.toHaveBeenCalled();
+  });
 });

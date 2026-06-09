@@ -15,7 +15,10 @@ type IntegrationToolResolution =
     }
   | {
       ok: false;
-      code: "tool_not_found" | "tool_definition_missing";
+      code:
+        | "tool_not_found"
+        | "tool_definition_missing"
+        | "tool_manifest_missing";
       message: string;
       adapter?: IntegrationAdapter;
       manifest?: AdapterToolManifest;
@@ -24,8 +27,19 @@ type IntegrationToolResolution =
 export function listIntegrationTools(
   adapters: IntegrationAdapter[],
 ): RegisteredIntegrationTool[] {
-  return adapters.flatMap((adapter) =>
-    adapter.manifest.tools.map((manifest) => {
+  return adapters.flatMap((adapter) => {
+    for (const definition of adapter.tools) {
+      const manifest = adapter.manifest.tools.find(
+        (tool) => tool.name === definition.name,
+      );
+      if (!manifest) {
+        throw new Error(
+          `Integration adapter "${adapter.manifest.id}" tool manifest missing for definition tool "${definition.name}"`,
+        );
+      }
+    }
+
+    return adapter.manifest.tools.map((manifest) => {
       const definition = adapter.tools.find((tool) => tool.name === manifest.name);
       if (!definition) {
         throw new Error(
@@ -44,8 +58,8 @@ export function listIntegrationTools(
         manifest,
         definition,
       };
-    }),
-  );
+    });
+  });
 }
 
 export function resolveIntegrationTool(
@@ -54,11 +68,20 @@ export function resolveIntegrationTool(
 ): IntegrationToolResolution {
   for (const adapter of adapters) {
     const manifest = adapter.manifest.tools.find((tool) => tool.name === toolName);
+    const definition = adapter.tools.find((tool) => tool.name === toolName);
     if (!manifest) {
+      if (definition) {
+        return {
+          ok: false,
+          code: "tool_manifest_missing",
+          message: `Integration adapter "${adapter.manifest.id}" tool manifest missing for definition tool "${toolName}"`,
+          adapter,
+        };
+      }
+
       continue;
     }
 
-    const definition = adapter.tools.find((tool) => tool.name === toolName);
     if (!definition) {
       return {
         ok: false,
