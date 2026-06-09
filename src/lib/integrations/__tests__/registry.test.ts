@@ -49,6 +49,41 @@ const demoAdapter: IntegrationAdapter = {
   execute: executeMock,
 };
 
+const envAdapter: IntegrationAdapter = {
+  manifest: {
+    id: "env-demo",
+    displayName: "Env Demo",
+    version: "1.0.0",
+    authMode: "env",
+    tools: [
+      {
+        name: "env.ping",
+        title: "Ping",
+        description: "Ping using env credentials",
+        permissions: ["demo:read"],
+        destructive: false,
+        audit: false,
+      },
+    ],
+  },
+  tools: [
+    {
+      name: "env.ping",
+      title: "Ping",
+      description: "Ping using env credentials",
+      inputSchema: z.object({ text: z.string() }),
+    },
+  ],
+  execute: executeMock,
+};
+
+const mcpApiKeyContext: AdapterExecutionContext = {
+  ...context,
+  actorId: "api-key-1",
+  actorType: "api_key",
+  source: "mcp",
+};
+
 describe("integration registry", () => {
   beforeEach(() => {
     executeMock.mockClear();
@@ -70,6 +105,23 @@ describe("integration registry", () => {
     );
     expect(result.ok).toBe(true);
     expect(result.data).toEqual({ text: "hello" });
+    expect(result.requestId).toBe("req_1");
+    expect(executeMock).toHaveBeenCalledOnce();
+  });
+
+  it("supports env auth adapters from mcp api key contexts without output schema", async () => {
+    const tools = listIntegrationTools([envAdapter]);
+    expect(tools).toHaveLength(1);
+    expect(tools[0].name).toBe("env.ping");
+
+    const result = await executeIntegrationTool(
+      [envAdapter],
+      "env.ping",
+      { text: "hello" },
+      mcpApiKeyContext,
+    );
+
+    expect(result.ok).toBe(true);
     expect(result.requestId).toBe("req_1");
     expect(executeMock).toHaveBeenCalledOnce();
   });

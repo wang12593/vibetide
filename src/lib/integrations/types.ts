@@ -1,10 +1,10 @@
 import type { ZodType } from "zod";
 
-export type AdapterActorType = "user" | "agent" | "system";
+export type AdapterActorType = "user" | "agent" | "api_key";
 
-export type AdapterSource = "user" | "agent" | "workflow" | "system";
+export type AdapterSource = "mcp" | "agent" | "server_action";
 
-export type AdapterAuthMode = "none" | "api_key" | "oauth";
+export type AdapterAuthMode = "none" | "env" | "oauth" | "api_key";
 
 export interface AdapterExecutionContext {
   organizationId: string;
@@ -40,7 +40,7 @@ export interface AdapterToolDefinition<
   title: string;
   description: string;
   inputSchema: ZodType<TInput>;
-  outputSchema: ZodType<TOutput>;
+  outputSchema?: ZodType<TOutput>;
 }
 
 export interface AdapterToolError {
