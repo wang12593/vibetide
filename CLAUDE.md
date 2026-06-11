@@ -286,6 +286,17 @@ Phase 1 交付的 `src/lib/cms/` 模块是 VibeTide 唯一出口。
 
 **配置 UI：** `/settings/cms-mapping`（绑定 app_channels → cms_catalogs + 同步日志）
 
+### MCP Integration Protocol Layer
+
+The MCP layer exposes third-party adapters without bypassing business services.
+
+- Adapter contract: `src/lib/integrations/types.ts`
+- CMS adapter: `src/lib/integrations/cms/`
+- MCP auth/server: `src/lib/mcp/`, `scripts/mcp-server.ts`
+- Internal agent bridge: `src/lib/agent/tools/integration-bridge.ts`
+
+CMS MCP tools must delegate to `@/lib/cms`; do not add raw CMS HTTP proxy tools.
+
 ### Scenario/Workflow 统一架构（B.1）
 
 **单一真相源：** `workflow_templates` 表是 VibeTide 所有"场景"的唯一来源。
