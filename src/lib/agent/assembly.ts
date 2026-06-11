@@ -224,6 +224,7 @@ export async function assembleAgent(
   // 6. Build the assembled agent (system prompt built inside)
   const agent: AssembledAgent = {
     employeeId,
+    organizationId: employee.organizationId,
     slug: employee.slug as EmployeeId,
     name: employee.name,
     nickname: employee.nickname,

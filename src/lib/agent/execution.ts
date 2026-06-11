@@ -69,7 +69,22 @@ export async function executeAgent(
     agent.knowledgeBaseIds && agent.knowledgeBaseIds.length > 0
       ? createKnowledgeBaseTools({ employeeKnowledgeBaseIds: agent.knowledgeBaseIds })
       : undefined;
-  const vercelTools = toVercelTools(agent.tools, agent.pluginConfigs, missionTools, kbTools);
+  const integrationPermissions = agent.skillCategories.includes("system_interop")
+    ? ["cms:publish", "cms:sync", "cms:read"]
+    : ["cms:read"];
+  const vercelTools = toVercelTools(
+    agent.tools,
+    agent.pluginConfigs,
+    missionTools,
+    kbTools,
+    agent.organizationId
+      ? {
+          organizationId: agent.organizationId,
+          actorId: agent.employeeId,
+          permissions: integrationPermissions,
+        }
+      : undefined,
+  );
 
   let toolCallCount = 0;
 

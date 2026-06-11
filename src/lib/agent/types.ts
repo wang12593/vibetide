@@ -37,6 +37,7 @@ export interface EmployeeMemoryEntry {
 
 export interface AssembledAgent {
   employeeId: string;
+  organizationId?: string;
   slug: EmployeeId;
   name: string;
   nickname: string;

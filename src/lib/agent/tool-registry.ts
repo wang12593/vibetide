@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod/v4";
 import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
+import { createIntegrationAgentTools } from "@/lib/agent/tools/integration-bridge";
 import { getBuiltinSkillNameToSlug } from "@/lib/skill-loader";
+import { cmsAdapter } from "@/lib/integrations/cms";
 import {
   browserNavigate,
   browserScreenshot,
@@ -1931,7 +1934,12 @@ export function toVercelTools(
   agentTools: AgentTool[],
   pluginConfigs?: Map<string, { description: string; config: PluginConfig }>,
   missionTools?: ToolSet,
-  knowledgeBaseTools?: ToolSet
+  knowledgeBaseTools?: ToolSet,
+  integrationContext?: {
+    organizationId: string;
+    actorId: string;
+    permissions: string[];
+  },
 ): ToolSet {
   const result: ToolSet = {};
 
@@ -1992,6 +2000,23 @@ export function toVercelTools(
   // Merge knowledge base retrieval tools if provided
   if (knowledgeBaseTools) {
     Object.assign(result, knowledgeBaseTools);
+  }
+
+  if (integrationContext) {
+    Object.assign(
+      result,
+      createIntegrationAgentTools({
+        adapters: [cmsAdapter],
+        context: {
+          organizationId: integrationContext.organizationId,
+          actorId: integrationContext.actorId,
+          actorType: "agent",
+          requestId: randomUUID(),
+          source: "agent",
+          permissions: integrationContext.permissions,
+        },
+      }),
+    );
   }
 
   return result;
