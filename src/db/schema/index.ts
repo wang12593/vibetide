@@ -98,3 +98,6 @@ export * from "./user-ai-preferences";
 
 // Requirement Clarification (多轮需求澄清, 2026-05-19)
 export * from "./clarification-sessions";
+
+// MCP / integration protocol invocation audit (2026-06-09)
+export * from "./mcp";

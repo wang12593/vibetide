@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { createMcpToolInvocation } from "@/lib/dal/mcp-tool-invocations";
 import {
   executeIntegrationTool,
   listIntegrationTools,
@@ -9,6 +10,10 @@ import type {
   AdapterToolResult,
   IntegrationAdapter,
 } from "../types";
+
+vi.mock("@/lib/dal/mcp-tool-invocations", () => ({
+  createMcpToolInvocation: vi.fn(),
+}));
 
 const context: AdapterExecutionContext = {
   organizationId: "00000000-0000-0000-0000-000000000001",
@@ -122,7 +127,7 @@ const auditAdapter: IntegrationAdapter = {
 
 describe("integration registry", () => {
   beforeEach(() => {
-    executeMock.mockClear();
+    vi.clearAllMocks();
   });
 
   it("lists tools from adapters", () => {
@@ -173,6 +178,74 @@ describe("integration registry", () => {
     expect(result.ok).toBe(true);
     expect(result.audit).toEqual({ externalRequestId: "ext_1" });
     expect(result.requestId).toBe("req_1");
+  });
+
+  it("writes an audit row for audited success results", async () => {
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(createMcpToolInvocation).toHaveBeenCalledOnce();
+    expect(createMcpToolInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req_1",
+        adapterId: "audit-demo",
+        toolName: "audit.echo",
+        organizationId: context.organizationId,
+        actorId: context.actorId,
+        actorType: context.actorType,
+        source: context.source,
+        inputSummary: { text: "hello" },
+        resultStatus: "success",
+        errorCode: undefined,
+        durationMs: expect.any(Number),
+      }),
+    );
+  });
+
+  it("writes an error audit row for audited validation failures", async () => {
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: 123, apiKey: "secret" },
+      context,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("invalid_input");
+    expect(createMcpToolInvocation).toHaveBeenCalledOnce();
+    expect(createMcpToolInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adapterId: "audit-demo",
+        toolName: "audit.echo",
+        inputSummary: { text: 123, apiKey: "[redacted]" },
+        resultStatus: "error",
+        errorCode: "invalid_input",
+      }),
+    );
+  });
+
+  it("does not block execution when audit writing fails", async () => {
+    vi.mocked(createMcpToolInvocation).mockRejectedValueOnce(
+      new Error("database unavailable"),
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toEqual({ text: "hello" });
+    expect(result.requestId).toBe("req_1");
+    expect(warnSpy).toHaveBeenCalledWith("[integrations] audit write failed");
   });
 
   it("rejects unknown tools", async () => {

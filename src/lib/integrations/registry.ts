@@ -1,4 +1,5 @@
 import { adapterFailure, permissionDenied } from "./errors";
+import { auditIntegrationInvocation } from "./audit";
 import type {
   AdapterExecutionContext,
   AdapterToolManifest,
@@ -139,21 +140,38 @@ export async function executeIntegrationTool(
     );
   }
 
+  const startedAt = performance.now();
   const missingPermission = resolved.tool.permissions.find(
     (permission) => !context.permissions.includes(permission),
   );
   if (missingPermission) {
-    return withRequestId(permissionDenied(missingPermission), context);
+    const result = withRequestId(permissionDenied(missingPermission), context);
+    await auditIntegrationInvocation({
+      tool: resolved.tool,
+      context,
+      input,
+      result,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+    return result;
   }
 
   const parsedInput = resolved.tool.definition.inputSchema.safeParse(input);
   if (!parsedInput.success) {
-    return withRequestId(
+    const result = withRequestId(
       adapterFailure("invalid_input", "Integration tool input is invalid", {
         issues: parsedInput.error.issues,
       }, "validation", false),
       context,
     );
+    await auditIntegrationInvocation({
+      tool: resolved.tool,
+      context,
+      input,
+      result,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+    return result;
   }
 
   try {
@@ -162,14 +180,30 @@ export async function executeIntegrationTool(
       parsedInput.data,
       context,
     );
-    return withRequestId(result, context);
+    const resultWithRequestId = withRequestId(result, context);
+    await auditIntegrationInvocation({
+      tool: resolved.tool,
+      context,
+      input: parsedInput.data,
+      result: resultWithRequestId,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+    return resultWithRequestId;
   } catch (error) {
-    return withRequestId(
+    const result = withRequestId(
       adapterFailure("adapter_exception", "Integration adapter execution failed", {
         message: error instanceof Error ? error.message : String(error),
       }, "execution", false),
       context,
     );
+    await auditIntegrationInvocation({
+      tool: resolved.tool,
+      context,
+      input: parsedInput.data,
+      result,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+    return result;
   }
 }
 
