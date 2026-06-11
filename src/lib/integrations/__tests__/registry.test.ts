@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createMcpToolInvocation } from "@/lib/dal/mcp-tool-invocations";
 import {
@@ -27,6 +27,12 @@ const context: AdapterExecutionContext = {
 const executeMock = vi.fn(async (_toolName, input) => ({
   ok: true,
   data: input,
+}));
+
+const auditExecuteMock = vi.fn(async (_toolName, input): Promise<AdapterToolResult> => ({
+  ok: true,
+  data: input,
+  audit: { externalRequestId: "ext_1" },
 }));
 
 const demoAdapter: IntegrationAdapter = {
@@ -118,16 +124,19 @@ const auditAdapter: IntegrationAdapter = {
       inputSchema: z.object({ text: z.string() }),
     },
   ],
-  execute: async (_toolName, input): Promise<AdapterToolResult> => ({
-    ok: true,
-    data: input,
-    audit: { externalRequestId: "ext_1" },
-  }),
+  execute: auditExecuteMock,
 };
 
 describe("integration registry", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    executeMock.mockClear();
+    auditExecuteMock.mockClear();
+    vi.mocked(createMcpToolInvocation).mockReset();
+    vi.mocked(createMcpToolInvocation).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("lists tools from adapters", () => {
@@ -199,7 +208,7 @@ describe("integration registry", () => {
         actorId: context.actorId,
         actorType: context.actorType,
         source: context.source,
-        inputSummary: { text: "hello" },
+        inputSummary: { text: "[redacted_content]" },
         resultStatus: "success",
         errorCode: undefined,
         durationMs: expect.any(Number),
@@ -222,11 +231,84 @@ describe("integration registry", () => {
       expect.objectContaining({
         adapterId: "audit-demo",
         toolName: "audit.echo",
-        inputSummary: { text: 123, apiKey: "[redacted]" },
+        inputSummary: { text: "[redacted_content]", apiKey: "[redacted]" },
         resultStatus: "error",
         errorCode: "invalid_input",
       }),
     );
+  });
+
+  it("writes an error audit row for audited permission failures", async () => {
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      { ...context, permissions: [] },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("permission_denied");
+    expect(createMcpToolInvocation).toHaveBeenCalledOnce();
+    expect(createMcpToolInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adapterId: "audit-demo",
+        toolName: "audit.echo",
+        inputSummary: { text: "[redacted_content]" },
+        resultStatus: "error",
+        errorCode: "permission_denied",
+      }),
+    );
+    expect(auditExecuteMock).not.toHaveBeenCalled();
+  });
+
+  it("writes an error audit row for audited adapter exceptions", async () => {
+    auditExecuteMock.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      context,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("adapter_exception");
+    expect(createMcpToolInvocation).toHaveBeenCalledOnce();
+    expect(createMcpToolInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adapterId: "audit-demo",
+        toolName: "audit.echo",
+        inputSummary: { text: "[redacted_content]" },
+        resultStatus: "error",
+        errorCode: "adapter_exception",
+      }),
+    );
+  });
+
+  it("returns audited results without waiting for audit persistence", async () => {
+    let resolveAuditWrite: () => void = () => {};
+    const auditWriteFinished = new Promise<void>((resolve) => {
+      resolveAuditWrite = resolve;
+    });
+    vi.mocked(createMcpToolInvocation).mockReturnValueOnce(auditWriteFinished);
+
+    const resultPromise = executeIntegrationTool(
+      [auditAdapter],
+      "audit.echo",
+      { text: "hello" },
+      context,
+    );
+    const raceResult = await Promise.race([
+      resultPromise.then(() => "returned"),
+      new Promise<"blocked">((resolve) => {
+        setTimeout(() => resolve("blocked"), 0);
+      }),
+    ]);
+
+    resolveAuditWrite();
+    await resultPromise;
+
+    expect(raceResult).toBe("returned");
   });
 
   it("does not block execution when audit writing fails", async () => {
@@ -245,6 +327,7 @@ describe("integration registry", () => {
     expect(result.ok).toBe(true);
     expect(result.data).toEqual({ text: "hello" });
     expect(result.requestId).toBe("req_1");
+    await Promise.resolve();
     expect(warnSpy).toHaveBeenCalledWith("[integrations] audit write failed");
   });
 

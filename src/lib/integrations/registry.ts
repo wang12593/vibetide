@@ -146,7 +146,7 @@ export async function executeIntegrationTool(
   );
   if (missingPermission) {
     const result = withRequestId(permissionDenied(missingPermission), context);
-    await auditIntegrationInvocation({
+    auditIntegrationInvocation({
       tool: resolved.tool,
       context,
       input,
@@ -164,7 +164,7 @@ export async function executeIntegrationTool(
       }, "validation", false),
       context,
     );
-    await auditIntegrationInvocation({
+    auditIntegrationInvocation({
       tool: resolved.tool,
       context,
       input,
@@ -181,7 +181,7 @@ export async function executeIntegrationTool(
       context,
     );
     const resultWithRequestId = withRequestId(result, context);
-    await auditIntegrationInvocation({
+    auditIntegrationInvocation({
       tool: resolved.tool,
       context,
       input: parsedInput.data,
@@ -196,7 +196,7 @@ export async function executeIntegrationTool(
       }, "execution", false),
       context,
     );
-    await auditIntegrationInvocation({
+    auditIntegrationInvocation({
       tool: resolved.tool,
       context,
       input: parsedInput.data,
