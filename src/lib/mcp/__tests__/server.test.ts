@@ -55,6 +55,13 @@ const demoAdapter: IntegrationAdapter = {
   execute: executeMock,
 };
 
+const failingAdapter: IntegrationAdapter = {
+  ...demoAdapter,
+  execute: vi.fn(() => {
+    throw new Error("adapter secret failure");
+  }),
+};
+
 describe("buildMcpServer", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -137,15 +144,54 @@ describe("buildMcpServer", () => {
           code: "permission_denied",
         },
       });
+      expect(result.content).toEqual([
+        {
+          type: "text",
+          text: JSON.stringify(result.structuredContent, null, 2),
+        },
+      ]);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it("returns an MCP error result when an adapter throws", async () => {
+    const connection = await connectDemoClient(context, [failingAdapter]);
+
+    try {
+      const result = await connection.client.callTool({
+        name: "demo.echo",
+        arguments: { text: "hello" },
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        ok: false,
+        requestId: "req_1",
+        error: {
+          code: "adapter_exception",
+          stage: "execution",
+          retriable: false,
+        },
+      });
+      expect(result.content).toEqual([
+        {
+          type: "text",
+          text: JSON.stringify(result.structuredContent, null, 2),
+        },
+      ]);
     } finally {
       await connection.close();
     }
   });
 });
 
-async function connectDemoClient(contextOverride: AdapterExecutionContext) {
+async function connectDemoClient(
+  contextOverride: AdapterExecutionContext,
+  adapters: IntegrationAdapter[] = [demoAdapter],
+) {
   const server = buildMcpServer({
-    adapters: [demoAdapter],
+    adapters,
     context: contextOverride,
   });
   const client = new Client({ name: "test-client", version: "1.0.0" });

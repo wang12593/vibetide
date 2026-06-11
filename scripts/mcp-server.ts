@@ -1,6 +1,6 @@
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { Request, Response } from "express";
+import type { ErrorRequestHandler, Request, Response } from "express";
 
 import { cmsAdapter } from "@/lib/integrations/cms";
 import { authenticateMcpRequest } from "@/lib/mcp/auth";
@@ -65,30 +65,18 @@ function sendJsonRpcError(
 const app = createMcpExpressApp({ host: MCP_HOST });
 
 app.get("/mcp", (_req, res) => {
+  res.set("Allow", "POST");
   sendJsonRpcError(res, 405, -32000, "Method not allowed");
 });
 
 app.delete("/mcp", (_req, res) => {
+  res.set("Allow", "POST");
   sendJsonRpcError(res, 405, -32000, "Method not allowed");
 });
 
 app.post("/mcp", async (req, res, next) => {
-  const auth = authenticateMcpRequest(toHeaders(req));
-
-  if (!auth.ok) {
-    sendJsonRpcError(res, auth.error.status, -32001, auth.error.message, {
-      code: auth.error.code,
-    });
-    return;
-  }
-
-  const mcpServer = buildMcpServer({
-    adapters: [cmsAdapter],
-    context: auth.context,
-  });
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-  });
+  let mcpServer: ReturnType<typeof buildMcpServer> | undefined;
+  let transport: StreamableHTTPServerTransport | undefined;
   let closed = false;
 
   const closeConnection = async () => {
@@ -96,14 +84,31 @@ app.post("/mcp", async (req, res, next) => {
       return;
     }
     closed = true;
-    await Promise.allSettled([transport.close(), mcpServer.close()]);
+    await Promise.allSettled([transport?.close(), mcpServer?.close()]);
   };
 
-  res.on("close", () => {
-    void closeConnection();
-  });
-
   try {
+    const auth = authenticateMcpRequest(toHeaders(req));
+
+    if (!auth.ok) {
+      sendJsonRpcError(res, auth.error.status, -32001, auth.error.message, {
+        code: auth.error.code,
+      });
+      return;
+    }
+
+    mcpServer = buildMcpServer({
+      adapters: [cmsAdapter],
+      context: auth.context,
+    });
+    transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+
+    res.on("close", () => {
+      void closeConnection();
+    });
+
     await mcpServer.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
@@ -117,6 +122,22 @@ app.post("/mcp", async (req, res, next) => {
     sendJsonRpcError(res, 500, -32603, "Internal MCP server error");
   }
 });
+
+const jsonRpcErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  if (isJsonBodyParseError(error)) {
+    sendJsonRpcError(res, 400, -32700, "Parse error");
+    return;
+  }
+
+  sendJsonRpcError(res, 500, -32603, "Internal MCP server error");
+};
+
+app.use(jsonRpcErrorHandler);
 
 const port = resolvePort();
 const httpServer = app.listen(port, MCP_HOST, () => {
@@ -139,3 +160,20 @@ function shutdown(): void {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
+function isJsonBodyParseError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const bodyParserError = error as Error & {
+    body?: unknown;
+    status?: number;
+    type?: string;
+  };
+
+  return (
+    bodyParserError.type === "entity.parse.failed" ||
+    (bodyParserError.status === 400 && "body" in bodyParserError)
+  );
+}
