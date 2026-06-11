@@ -376,8 +376,8 @@ describe("integration registry", () => {
     expect(executeMock).not.toHaveBeenCalled();
   });
 
-  it("returns adapter exceptions as execution errors", async () => {
-    executeMock.mockRejectedValueOnce(new Error("boom"));
+  it("returns adapter exceptions as execution errors without leaking messages", async () => {
+    executeMock.mockRejectedValueOnce(new Error("secret connection string"));
 
     const result = await executeIntegrationTool(
       [demoAdapter],
@@ -390,6 +390,7 @@ describe("integration registry", () => {
     expect(result.error?.code).toBe("adapter_exception");
     expect(result.error?.stage).toBe("execution");
     expect(result.error?.retriable).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("secret connection string");
     expect(result.requestId).toBe("req_1");
     expect(executeMock).toHaveBeenCalledOnce();
   });

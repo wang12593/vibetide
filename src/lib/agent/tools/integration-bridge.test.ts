@@ -2,8 +2,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import {
   createIntegrationAgentTools,
+  deriveCmsIntegrationPermissions,
   toAgentToolAlias,
 } from "./integration-bridge";
+import type { AgentTool } from "@/lib/agent/types";
 import type {
   AdapterExecutionContext,
   IntegrationAdapter,
@@ -101,5 +103,45 @@ describe("createIntegrationAgentTools", () => {
       data: { text: "hello" },
       requestId: "req_1",
     });
+  });
+
+  it("derives CMS permissions only from retained CMS agent tools", () => {
+    const agentTools = [
+      { name: "cms_publish", description: "Publish", parameters: {} },
+      { name: "cms_catalog_sync", description: "Sync", parameters: {} },
+    ] satisfies AgentTool[];
+
+    expect(
+      deriveCmsIntegrationPermissions({
+        agentTools,
+        authorityLevel: "executor",
+      }),
+    ).toEqual(["cms:publish", "cms:read", "cms:sync"]);
+  });
+
+  it("does not grant CMS permissions to advisors even if tools are present", () => {
+    const agentTools = [
+      { name: "cms_publish", description: "Publish", parameters: {} },
+    ] satisfies AgentTool[];
+
+    expect(
+      deriveCmsIntegrationPermissions({
+        agentTools,
+        authorityLevel: "advisor",
+      }),
+    ).toEqual([]);
+  });
+
+  it("does not grant CMS read permissions from unrelated tools", () => {
+    const agentTools = [
+      { name: "publish_strategy", description: "Strategy", parameters: {} },
+    ] satisfies AgentTool[];
+
+    expect(
+      deriveCmsIntegrationPermissions({
+        agentTools,
+        authorityLevel: "executor",
+      }),
+    ).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import type {
   AdapterExecutionContext,
   AdapterToolResult,
   IntegrationAdapter,
+  RegisteredIntegrationTool,
 } from "@/lib/integrations/types";
 
 export interface BuildMcpServerParams {
@@ -23,6 +24,10 @@ export function buildMcpServer(params: BuildMcpServerParams): McpServer {
   });
 
   for (const registered of listIntegrationTools(params.adapters)) {
+    if (!hasAllPermissions(params.context, registered)) {
+      continue;
+    }
+
     server.registerTool(
       registered.name,
       {
@@ -44,6 +49,15 @@ export function buildMcpServer(params: BuildMcpServerParams): McpServer {
   }
 
   return server;
+}
+
+function hasAllPermissions(
+  context: AdapterExecutionContext,
+  tool: RegisteredIntegrationTool,
+): boolean {
+  return tool.permissions.every((permission) =>
+    context.permissions.includes(permission),
+  );
 }
 
 function toMcpCallToolResult(result: AdapterToolResult): CallToolResult {

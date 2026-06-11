@@ -41,6 +41,14 @@ const demoAdapter: IntegrationAdapter = {
         destructive: false,
         audit: false,
       },
+      {
+        name: "demo.write",
+        title: "Write",
+        description: "Write input text",
+        permissions: ["demo:write"],
+        destructive: false,
+        audit: false,
+      },
     ],
   },
   tools: [
@@ -48,6 +56,13 @@ const demoAdapter: IntegrationAdapter = {
       name: "demo.echo",
       title: "Echo",
       description: "Echo input text",
+      inputSchema: z.object({ text: z.string() }),
+      outputSchema: z.object({ text: z.string() }),
+    },
+    {
+      name: "demo.write",
+      title: "Write",
+      description: "Write input text",
       inputSchema: z.object({ text: z.string() }),
       outputSchema: z.object({ text: z.string() }),
     },
@@ -124,32 +139,18 @@ describe("buildMcpServer", () => {
     }
   });
 
-  it("returns an MCP error result for missing permissions", async () => {
-    const connection = await connectDemoClient({
-      ...context,
-      permissions: [],
-    });
+  it("does not list integration tools missing required permissions", async () => {
+    const connection = await connectDemoClient(context);
 
     try {
-      const result = await connection.client.callTool({
-        name: "demo.echo",
-        arguments: { text: "hello" },
-      });
+      const result = await connection.client.listTools();
 
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent).toMatchObject({
-        ok: false,
-        requestId: "req_1",
-        error: {
-          code: "permission_denied",
-        },
-      });
-      expect(result.content).toEqual([
-        {
-          type: "text",
-          text: JSON.stringify(result.structuredContent, null, 2),
-        },
+      expect(result.tools.map((toolDef) => toolDef.name)).toEqual([
+        "demo.echo",
       ]);
+      expect(result.tools.map((toolDef) => toolDef.name)).not.toContain(
+        "demo.write",
+      );
     } finally {
       await connection.close();
     }
@@ -180,6 +181,9 @@ describe("buildMcpServer", () => {
           text: JSON.stringify(result.structuredContent, null, 2),
         },
       ]);
+      expect(JSON.stringify(result.structuredContent)).not.toContain(
+        "adapter secret failure",
+      );
     } finally {
       await connection.close();
     }

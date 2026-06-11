@@ -1,6 +1,7 @@
 import { generateText, stepCountIs } from "ai";
 import { getLanguageModel } from "./model-router";
 import { toVercelTools, createKnowledgeBaseTools } from "./tool-registry";
+import { deriveCmsIntegrationPermissions } from "./tools/integration-bridge";
 import {
   buildStepInstruction,
   formatPreviousStepContext,
@@ -69,15 +70,16 @@ export async function executeAgent(
     agent.knowledgeBaseIds && agent.knowledgeBaseIds.length > 0
       ? createKnowledgeBaseTools({ employeeKnowledgeBaseIds: agent.knowledgeBaseIds })
       : undefined;
-  const integrationPermissions = agent.skillCategories.includes("system_interop")
-    ? ["cms:publish", "cms:sync", "cms:read"]
-    : ["cms:read"];
+  const integrationPermissions = deriveCmsIntegrationPermissions({
+    agentTools: agent.tools,
+    authorityLevel: agent.authorityLevel,
+  });
   const vercelTools = toVercelTools(
     agent.tools,
     agent.pluginConfigs,
     missionTools,
     kbTools,
-    agent.organizationId
+    agent.organizationId && integrationPermissions.length > 0
       ? {
           organizationId: agent.organizationId,
           actorId: agent.employeeId,

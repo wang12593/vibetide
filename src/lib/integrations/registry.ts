@@ -190,10 +190,15 @@ export async function executeIntegrationTool(
     });
     return resultWithRequestId;
   } catch (error) {
+    void error;
     const result = withRequestId(
-      adapterFailure("adapter_exception", "Integration adapter execution failed", {
-        message: error instanceof Error ? error.message : String(error),
-      }, "execution", false),
+      adapterFailure(
+        "adapter_exception",
+        "Integration adapter execution failed",
+        undefined,
+        "execution",
+        false,
+      ),
       context,
     );
     auditIntegrationInvocation({
